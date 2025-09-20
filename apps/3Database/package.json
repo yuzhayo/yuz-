@@ -1,0 +1,17 @@
+{
+  "name": "app-3databse",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": " Modul DATABASE Monitoring..",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --port 5003"
+  },
+  "dependencies": {
+    "pixi.js": "^7.4.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  }
+}
