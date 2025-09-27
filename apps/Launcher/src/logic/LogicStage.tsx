@@ -1,5 +1,5 @@
 import React from 'react'
-import { createStage2048 } from '../utils/stage2048Module'
+import { createStage2048 } from '@shared/stages/Stage2048'
 import { buildSceneFromLogic } from './logicLoader'
 import type { LogicConfig } from './sceneTypes'
 import logicConfigJson from './LogicConfig'

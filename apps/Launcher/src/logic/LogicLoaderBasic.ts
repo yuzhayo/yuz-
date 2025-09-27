@@ -1,7 +1,7 @@
 import type { Application, Sprite } from 'pixi.js'
 import type { LayerConfig } from './sceneTypes'
 import { toRad } from './LogicMath'
-import { STAGE_WIDTH, STAGE_HEIGHT } from '../utils/stage2048Module'
+import { STAGE_WIDTH, STAGE_HEIGHT } from '@shared/stages/Stage2048'
 
 // Basic placement & ordering helpers
 

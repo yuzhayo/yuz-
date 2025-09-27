@@ -1,12 +1,12 @@
 /**
- * Stage2048 Module - Standalone 2048×2048 Stage System
+ * Stage2048 - Standalone 2048×2048 Stage System
  * 
  * A complete stage system that handles Pixi.js integration, coordinate transformation,
  * and responsive scaling with a fixed 2048×2048 design canvas.
  * 
  * Usage:
  * ```ts
- * import { createStage2048 } from './stage2048Module'
+ * import { createStage2048, STAGE_WIDTH, STAGE_HEIGHT } from '@shared/stages/Stage2048'
  * 
  * // Simple usage
  * const stage = await createStage2048(rootElement)
@@ -25,6 +25,12 @@ import type {
   MouseEvent as ReactMouseEvent,
   TouchEvent as ReactTouchEvent,
 } from 'react';
+
+// ===== CONSTANTS =====
+
+/** Fixed stage dimensions - 2048×2048 design canvas */
+export const STAGE_WIDTH = 2048
+export const STAGE_HEIGHT = 2048
 
 // ===== TYPES AND INTERFACES =====
 
@@ -68,12 +74,6 @@ export interface Stage2048Instance {
   /** Clean up and dispose resources */
   dispose(): void
 }
-
-// ===== CONSTANTS =====
-
-/** Fixed stage dimensions - 2048×2048 design canvas */
-export const STAGE_WIDTH = 2048
-export const STAGE_HEIGHT = 2048
 
 // ===== CSS STYLES =====
 
@@ -410,7 +410,7 @@ export class StageTransformManager {
   }
 }
 
-// ===== REACT HOOKS AND UTILITIES =====
+// ===== REACT INTEGRATION =====
 
 /**
  * Create a coordinate transformer hook for React components
@@ -466,7 +466,7 @@ export function useStageCoordinates(transformManager: StageTransformManager) {
   }
 }
 
-// ===== MAIN FACTORY FUNCTION =====
+// ===== FACTORY FUNCTIONS =====
 
 /**
  * Create a complete Stage2048 system with Pixi.js integration
@@ -584,8 +584,6 @@ export async function createStage2048(
     }
   }
 }
-
-// ===== ADVANCED FACTORY FUNCTIONS =====
 
 /**
  * Create just the transform manager (for custom Pixi setups)
