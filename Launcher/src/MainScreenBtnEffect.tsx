@@ -12,22 +12,22 @@ import type { CSSProperties } from 'react'
  * - Tidak ada dependency eksternal selain React & Tailwind (kelas util).
  */
 
-export type LauncherBtnEffectKind = 'none' | 'fade' | 'pulse' | 'glow'
+export type MainScreenBtnEffectKind = 'none' | 'fade' | 'pulse' | 'glow'
 
-export type LauncherBtnEffectConfig = {
-  kind?: LauncherBtnEffectKind
+export type MainScreenBtnEffectConfig = {
+  kind?: MainScreenBtnEffectKind
   intensity?: number // 0..1 (opsional; reserved)
 }
 
 /** State dari panel tombol, bisa dipakai untuk memicu anim. */
-export type LauncherBtnEffectState = {
+export type MainScreenBtnEffectState = {
   open: boolean
   hovering?: boolean
   pressing?: boolean
 }
 
 /** Keluaran visual untuk dipakai di <LauncherBtn /> */
-export type LauncherBtnVisual = {
+export type MainScreenBtnVisual = {
   panelClass: string
   panelStyle?: CSSProperties
   buttonClass: string
@@ -39,10 +39,10 @@ export type LauncherBtnVisual = {
  * Hook efek visual. Saat ini stub "none" dengan styling aman.
  * Nanti bisa diganti: tambah anim glow/pulse/fade berbasis Tailwind utility.
  */
-export function useLauncherBtnEffect(
-  state: LauncherBtnEffectState,
-  cfg?: LauncherBtnEffectConfig
-): LauncherBtnVisual {
+export function useMainScreenBtnEffect(
+  state: MainScreenBtnEffectState,
+  cfg?: MainScreenBtnEffectConfig
+): MainScreenBtnVisual {
   const kind = cfg?.kind ?? 'none'
 
   // Base styles aman (dark UI)

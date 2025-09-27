@@ -18,14 +18,14 @@ import React from 'react'
  * - Tidak bergantung file lain. Efek visual diurus file LauncherBtnEffect.tsx.
  */
 
-export type LauncherBtnGestureOptions = {
+export type MainScreenBtnGestureOptions = {
   /** Durasi tahan minimal (ms) untuk terdeteksi long-press. Default 450 ms. */
   holdMs?: number
   /** Ambang toleransi gerakan saat menahan (px). Default 8 px. */
   moveTolerancePx?: number
 }
 
-export type LauncherBtnGesture = {
+export type MainScreenBtnGesture = {
   /** Status panel tombol (true: tampil). */
   open: boolean
   /** Ganti status secara manual (opsional). */
@@ -49,7 +49,7 @@ type PressState = {
   consumed: boolean // true jika sudah toggle pada siklus ini
 }
 
-export function useLauncherBtnGesture(opts?: LauncherBtnGestureOptions): LauncherBtnGesture {
+export function useMainScreenBtnGesture(opts?: MainScreenBtnGestureOptions): MainScreenBtnGesture {
   const holdMs = Math.max(120, Math.floor(opts?.holdMs ?? 450))
   const tol = Math.max(2, Math.floor(opts?.moveTolerancePx ?? 8))
 
@@ -144,16 +144,16 @@ export function useLauncherBtnGesture(opts?: LauncherBtnGestureOptions): Launche
  * - Pasang overlay tak terlihat yang menerima gestur.
  * - Kamu bisa styling overlay sendiri via className.
  * ================================================ */
-export type LauncherBtnGestureAreaProps = {
+export type MainScreenBtnGestureAreaProps = {
   className?: string
   style?: React.CSSProperties
   children?: React.ReactNode
-  options?: LauncherBtnGestureOptions
+  options?: MainScreenBtnGestureOptions
   onOpenChange?: (open: boolean) => void
 }
 
-export function LauncherBtnGestureArea(props: LauncherBtnGestureAreaProps) {
-  const g = useLauncherBtnGesture(props.options)
+export function MainScreenBtnGestureArea(props: MainScreenBtnGestureAreaProps) {
+  const g = useMainScreenBtnGesture(props.options)
   React.useEffect(() => { props.onOpenChange?.(g.open) }, [g.open, props])
 
   return (

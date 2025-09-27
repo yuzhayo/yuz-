@@ -1,6 +1,6 @@
 import React from 'react'
-import { LauncherBtnPanel } from './LauncherBtn'
-import { useLauncherBtnGesture } from './LauncherBtnGesture'
+import { MainScreenBtnPanel } from './MainScreenBtn'
+import { useMainScreenBtnGesture } from './MainScreenBtnGesture'
 import MainScreenRendererBadge from './MainScreenRendererBadge'
 import MainScreenUpdater from './MainScreenUpdater'
 import MainScreenApiTester from './MainScreenApiTester'
@@ -19,7 +19,7 @@ export type MainScreenProps = {
 export default function MainScreen(props: MainScreenProps) {
   const mode = props.rendererMode ?? 'auto'
   const chosen = detectRenderer(mode)
-  const gesture = useLauncherBtnGesture()
+  const gesture = useMainScreenBtnGesture()
   const label = chosen === 'pixi' ? 'Renderer: Pixi' : 'Renderer: DOM'
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800">
@@ -40,7 +40,7 @@ export default function MainScreen(props: MainScreenProps) {
       </div>
 
       {/* Navigation dock */}
-      <LauncherBtnPanel
+      <MainScreenBtnPanel
         open={gesture.open}
         onToggle={gesture.toggle}
         effect={{ kind: 'fade' }}

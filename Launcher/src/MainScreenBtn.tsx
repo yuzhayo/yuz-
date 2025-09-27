@@ -1,6 +1,6 @@
 import React from 'react'
-import { useLauncherBtnEffect, type LauncherBtnEffectConfig } from './LauncherBtnEffect'
-import { useLauncherBtnGesture } from './LauncherBtnGesture'
+import { useMainScreenBtnEffect, type MainScreenBtnEffectConfig } from './MainScreenBtnEffect'
+import { useMainScreenBtnGesture } from './MainScreenBtnGesture'
 
 /**
  * LauncherBtn - Panel navigasi ke masing-masing module.
@@ -25,7 +25,7 @@ function getDefaultModuleLinks(): ModuleLink[] {
   ]
 }
 
-export type LauncherBtnProps = {
+export type MainScreenBtnProps = {
   /** Status panel (true: tampil). Direkomendasikan dikontrol oleh useLauncherBtnGesture. */
   open: boolean
   /** Toggle panel (dipanggil oleh tombol Close). */
@@ -33,19 +33,19 @@ export type LauncherBtnProps = {
   /** Kustom link modul. Default: baca ENV lalu fallback port lokal. */
   links?: ModuleLink[]
   /** Konfigurasi efek visual tombol/panel. */
-  effect?: LauncherBtnEffectConfig
+  effect?: MainScreenBtnEffectConfig
   /** Judul kecil panel. */
   title?: string
   /** Buka link di tab yang sama (default) atau tab baru. */
   target?: '_self' | '_blank'
 }
 
-export function LauncherBtnPanel(props: LauncherBtnProps) {
+export function MainScreenBtnPanel(props: MainScreenBtnProps) {
   const { open, onToggle, title = 'Modules', target = '_self' } = props
   const [hovering, setHovering] = React.useState(false)
   const [pressing, setPressing] = React.useState(false)
 
-  const vis = useLauncherBtnEffect(
+  const vis = useMainScreenBtnEffect(
     { open, hovering, pressing },
     props.effect
   )
@@ -107,14 +107,14 @@ export function LauncherBtnPanel(props: LauncherBtnProps) {
  * - Pasang ini di App/LauncherScreen untuk pengalaman lengkap.
  * - HOLD-TAP di mana saja pada area overlay akan toggle panel.
  */
-export function LauncherBtnDock(props: Omit<LauncherBtnProps, 'open' | 'onToggle'> & { overlayClassName?: string }) {
-  const gesture = useLauncherBtnGesture()
+export function MainScreenBtnDock(props: Omit<MainScreenBtnProps, 'open' | 'onToggle'> & { overlayClassName?: string }) {
+  const gesture = useMainScreenBtnGesture()
   return (
     <>
       {/* Area gestur tak terlihat */}
       <div {...gesture.bindTargetProps()} className={props.overlayClassName ?? 'absolute inset-0 pointer-events-auto'} />
       {/* Panel */}
-      <LauncherBtnPanel
+      <MainScreenBtnPanel
         open={gesture.open}
         onToggle={gesture.toggle}
         links={props.links}
