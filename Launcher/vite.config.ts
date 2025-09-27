@@ -4,7 +4,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const r = (p: string) => path.resolve(path.dirname(fileURLToPath(import.meta.url)), p)
-const monorepoRoot = r('../..')
+const monorepoRoot = r('..')
 
 // Vite 7, ESM. Alias @shared -> root/shared.
 // Force port: 5000, host 0.0.0.0, strictPort ON, allowedHosts sesuai contohmu.
@@ -23,11 +23,15 @@ export default defineConfig({
     include: ['pixi.js']
   },
   
+  publicDir: false,
   server: {
     host: '0.0.0.0',
     port: 5000,
     strictPort: true,
-    allowedHosts: true
+    allowedHosts: true,
+    fs: {
+      allow: ['..']
+    }
   },
   preview: {
     host: '0.0.0.0',
