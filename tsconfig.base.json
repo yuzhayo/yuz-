@@ -17,5 +17,16 @@
       "@shared/*": ["shared/*"]
     }
   },
-  "exclude": ["node_modules", "dist"]
+  "exclude": [
+    "node_modules", 
+    "dist", 
+    "coverage",
+    "apps/**/dist",
+    "apps/**/coverage", 
+    "Launcher/dist",
+    "Launcher/coverage",
+    "src-yuz-old",
+    "yuzha-yo", 
+    "attached_assets"
+  ]
 }
