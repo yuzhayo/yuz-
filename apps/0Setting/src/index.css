@@ -1,4 +1,4 @@
-@import '../../../shared/styles/fonts.css';
+@import '../../../shared/fonts/taimingda.css';
 /* Tailwind entry for Launcher (minimal, global-safe) */
 @tailwind base;
 @tailwind components;
