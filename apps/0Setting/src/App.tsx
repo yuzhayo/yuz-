@@ -1,5 +1,5 @@
 ﻿import React, { useEffect, useState } from 'react';
-import { usePasskeySession } from '@shared/hooks/usePasskeySession';
+import { usePasskeySession } from '@shared/PasskeySession';
 import { listUserConfigs, upsertUserConfig, type UserConfigRecord } from '@shared/storage/localData';
 
 const DEFAULT_FORM = {
