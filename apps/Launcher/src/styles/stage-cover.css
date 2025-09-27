@@ -1,6 +1,6 @@
 /**
  * Stage 1:1 Cover CSS
- * Ensures 1024×1024 design world displays consistently across all devices
+ * Ensures 2048×2048 design world displays consistently across all devices
  * with cover behavior (fills viewport, maintains aspect ratio)
  */
 
@@ -14,8 +14,8 @@
   overflow: hidden;
   
   /* Will be set dynamically by JS */
-  width: 1024px;
-  height: 1024px;
+  width: 2048px;
+  height: 2048px;
 }
 
 /* The actual canvas element */
@@ -24,14 +24,14 @@
   transform-origin: 0 0;
   
   /* Fixed design dimensions */
-  width: 1024px !important;
-  height: 1024px !important;
+  width: 2048px !important;
+  height: 2048px !important;
   
   /* Prevent any browser-imposed sizing */
   max-width: none !important;
   max-height: none !important;
-  min-width: 1024px !important;
-  min-height: 1024px !important;
+  min-width: 2048px !important;
+  min-height: 2048px !important;
   
   /* GPU acceleration */
   will-change: transform;

@@ -6,7 +6,7 @@ import type {
 
 /**
  * Stage Transform Utilities
- * Handles 1024×1024 stage scaling and coordinate transformation
+ * Handles 2048×2048 stage scaling and coordinate transformation
  */
 
 export interface StageTransform {
@@ -23,8 +23,8 @@ export interface StageCoordinates {
 }
 
 // Design canvas dimensions (fixed)
-export const STAGE_WIDTH = 1024
-export const STAGE_HEIGHT = 1024
+export const STAGE_WIDTH = 2048
+export const STAGE_HEIGHT = 2048
 
 /**
  * Calculate stage transform for cover behavior
