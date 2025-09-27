@@ -6,12 +6,17 @@
   "description": "Launcher app (Pixi default, DOM fallback). OPSI 3 structure.",
   "scripts": {
     "dev": "vite",
+    "dev:3000": "cross-env PORT=3000 vite",
+    "dev:5000": "cross-env PORT=5000 vite",
     "build": "vite build",
-    "preview": "vite preview --port 5000",
+    "preview": "vite preview",
+    "preview:3000": "cross-env PORT=3000 vite preview",
+    "preview:5000": "cross-env PORT=5000 vite preview",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
     "@pixi/unsafe-eval": "^7.4.0",
+    "cross-env": "^10.0.0",
     "pixi.js": "^7.4.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0"
