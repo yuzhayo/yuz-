@@ -1,5 +1,5 @@
 import React from 'react'
-import LauncherScreen from './logic/LauncherScreen'
+import LauncherScreen from './LauncherScreen'
 
 export default function App() {
   return (

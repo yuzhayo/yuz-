@@ -1,12 +1,12 @@
 import React from 'react'
-import { LauncherBtnPanel } from '../ui/LauncherBtn'
-import { useLauncherBtnGesture } from '../ui/LauncherBtnGesture'
+import { LauncherBtnPanel } from './ui/LauncherBtn'
+import { useLauncherBtnGesture } from './ui/LauncherBtnGesture'
 import LogicRendererBadge from './LogicRendererBadge'
 import LauncherUpdater from './LauncherUpdater'
 import LogicApiTester from './LogicApiTester'
-import LogicStage from './LogicStage'
-import LogicStageDom from './LogicStageDom'
-import { detectRenderer, type RendererMode } from './LogicCapability'
+import LogicStage from './logic/LogicStage'
+import LogicStageDom from './logic/LogicStageDom'
+import { detectRenderer, type RendererMode } from './logic/LogicCapability'
 
 export type LauncherScreenProps = {
   rendererMode?: RendererMode // 'auto' | 'pixi' | 'dom'
