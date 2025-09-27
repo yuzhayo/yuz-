@@ -3,19 +3,19 @@ import type { LogicConfig } from './sceneTypes'
 // @ts-ignore - JSON import without type
 import rawConfig from './LogicConfig.json'
 
-const assetManifest = import.meta.glob('../Asset/**/*.{png,jpg,jpeg,gif,webp,avif,svg}', {
+const assetManifest = import.meta.glob('../../../../shared/asset/**/*.{png,jpg,jpeg,gif,webp,avif,svg}', {
   eager: true,
   query: '?url',
   import: 'default',
 }) as Record<string, string>
 
-const SRC_ASSET_PREFIXES = ['/src/Asset/', 'src/Asset/']
+const SRC_ASSET_PREFIXES = ['/shared/asset/', 'shared/asset/']
 
 function resolveBundledAsset(path: string): string | null {
   for (const prefix of SRC_ASSET_PREFIXES) {
     if (path.startsWith(prefix)) {
       const relative = path.slice(prefix.length)
-      const manifestKey = `../Asset/${relative}`
+      const manifestKey = `../../../../shared/asset/${relative}`
       const mapped = assetManifest[manifestKey]
       if (mapped) return mapped
       console.warn('[logic] Missing bundled asset for', path)

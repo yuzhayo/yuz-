@@ -11,39 +11,39 @@
     "L90","L91","L92","L93","L94","L95","L96","L97","L98","L99"
   ],
   "imageRegistry": {
-    "a": "/src/Asset/SAMPLE.png",
+    "a": "/shared/asset/SAMPLE.png",
 
-    "NOON": "/src/Asset/UI_ClockIcon_Noon.png",
-    "DAWN": "/src/Asset/UI_ClockIcon_Morning.png",
-    "DUSK": "/src/Asset/UI_ClockIcon_Dusk.png",
-    "NIGHT": "/src/Asset/UI_ClockIcon_Night.png",
+    "NOON": "/shared/asset/UI_ClockIcon_Noon.png",
+    "DAWN": "/shared/asset/UI_ClockIcon_Morning.png",
+    "DUSK": "/shared/asset/UI_ClockIcon_Dusk.png",
+    "NIGHT": "/shared/asset/UI_ClockIcon_Night.png",
 
-    "STARBGHOLE": "/src/Asset/STARBGHOLE1.png",
-    "STARBG": "/src/Asset/STARBG.png",
-    "STAR1": "/src/Asset/Enviro_Stars.png",
-    "STAR2": "/src/Asset/Enviro_Stars_Big.png",
+    "STARBGHOLE": "/shared/asset/STARBGHOLE1.png",
+    "STARBG": "/shared/asset/STARBG.png",
+    "STAR1": "/shared/asset/Enviro_Stars.png",
+    "STAR2": "/shared/asset/Enviro_Stars_Big.png",
 
-    "GEAR1": "/src/Asset/GEAR1.png",
-    "GEAR2": "/src/Asset/GEAR2.png",
-    "GEAR3": "/src/Asset/GEAR3.png",
-    "GEARMOON": "/src/Asset/GEARMOON.png",
-    "CLOCKGLOW": "/src/Asset/CLOCKGLOW.png",
-    "CLOCKGLOW1": "/src/Asset/CLOCKGLOW1.png",
-    "CLOCKGLOW2": "/src/Asset/CLOCKGLOW2.png",
-    "CLOCKBG": "/src/Asset/CLOCKBG.png",
-    "HAND1": "/src/Asset/UI_Clock_HourHand.png",
-    "HAND2": "/src/Asset/UI_Clock_MinuteHand.png",
+    "GEAR1": "/shared/asset/GEAR1.png",
+    "GEAR2": "/shared/asset/GEAR2.png",
+    "GEAR3": "/shared/asset/GEAR3.png",
+    "GEARMOON": "/shared/asset/GEARMOON.png",
+    "CLOCKGLOW": "/shared/asset/CLOCKGLOW.png",
+    "CLOCKGLOW1": "/shared/asset/CLOCKGLOW1.png",
+    "CLOCKGLOW2": "/shared/asset/CLOCKGLOW2.png",
+    "CLOCKBG": "/shared/asset/CLOCKBG.png",
+    "HAND1": "/shared/asset/UI_Clock_HourHand.png",
+    "HAND2": "/shared/asset/UI_Clock_MinuteHand.png",
 
 
 
-    "BUBBLE": "/src/Asset/BUBBLE.png",
-    "DESK": "/src/Asset/AchieveMedal_Desk_Short02.png",
-    "SYSHEAD": "/src/Asset/SystemMessageBg.png",
-    "GEAR6": "/src/Asset/UI_Img_SlimeCannont_Pic_06.png",
-    "GEAR7": "/src/Asset/UI_Img_SlimeCannont_Pic_07.png",
-    "GEAR8": "/src/Asset/UI_Img_SlimeCannont_Pic_08.png",
-    "GREENDOTOFF": "/src/Asset/Prestige_SlotBase_Off.png",
-    "GREENDOTON": "/src/Asset/Prestige_SlotBase.png",
+    "BUBBLE": "/shared/asset/BUBBLE.png",
+    "DESK": "/shared/asset/AchieveMedal_Desk_Short02.png",
+    "SYSHEAD": "/shared/asset/SystemMessageBg.png",
+    "GEAR6": "/shared/asset/UI_Img_SlimeCannont_Pic_06.png",
+    "GEAR7": "/shared/asset/UI_Img_SlimeCannont_Pic_07.png",
+    "GEAR8": "/shared/asset/UI_Img_SlimeCannont_Pic_08.png",
+    "GREENDOTOFF": "/shared/asset/Prestige_SlotBase_Off.png",
+    "GREENDOTON": "/shared/asset/Prestige_SlotBase.png",
     
 
 
@@ -52,7 +52,7 @@
 
 
 
-    "LOCK": "/src/Asset/V3_LockIcon.png"
+    "LOCK": "/shared/asset/V3_LockIcon.png"
   },
 
   "layers": [
