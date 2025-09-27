@@ -1,6 +1,6 @@
 import React from 'react'
 
-export type LauncherUpdaterProps = {
+export type MainScreenUpdaterProps = {
   visible: boolean
 }
 
@@ -26,7 +26,7 @@ async function clearCachesAndReload() {
   }
 }
 
-export default function LauncherUpdater(props: LauncherUpdaterProps) {
+export default function MainScreenUpdater(props: MainScreenUpdaterProps) {
   if (!props.visible) return null
   return (
     <button

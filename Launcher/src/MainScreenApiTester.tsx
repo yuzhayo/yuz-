@@ -1,10 +1,10 @@
 ﻿import React from 'react'
 
-export type LogicApiTesterProps = {
+export type MainScreenApiTesterProps = {
   visible: boolean
 }
 
-export default function LogicApiTester(props: LogicApiTesterProps) {
+export default function MainScreenApiTester(props: MainScreenApiTesterProps) {
   if (!props.visible) return null
 
   return (

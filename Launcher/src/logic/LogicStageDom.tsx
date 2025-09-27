@@ -1,6 +1,6 @@
 import React from 'react'
 import type { ClockHand, ClockHandSelection, LogicConfig, LayerConfig } from './sceneTypes'
-import cfgJson from './LogicConfig'
+import cfgJson from '../LogicConfig'
 import { clamp, clamp01, clampRpm60, toRad } from './LogicMath'
 import { logicZIndexFor } from './LogicLoaderBasic'
 

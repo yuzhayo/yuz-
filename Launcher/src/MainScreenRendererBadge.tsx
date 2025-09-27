@@ -1,11 +1,11 @@
 import React from 'react'
 
-export type LogicRendererBadgeProps = {
+export type MainScreenRendererBadgeProps = {
   visible: boolean
   label: string
 }
 
-export default function LogicRendererBadge(props: LogicRendererBadgeProps) {
+export default function MainScreenRendererBadge(props: MainScreenRendererBadgeProps) {
   if (!props.visible) return null
   return (
     <div

@@ -2,7 +2,7 @@ import React from 'react'
 import { createStage2048 } from '@shared/stages/Stage2048'
 import { buildSceneFromLogic } from './logicLoader'
 import type { LogicConfig } from './sceneTypes'
-import logicConfigJson from './LogicConfig'
+import logicConfigJson from '../LogicConfig'
 
 export default function LogicStage() {
   const ref = React.useRef<HTMLDivElement | null>(null)

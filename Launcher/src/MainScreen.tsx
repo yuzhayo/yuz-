@@ -1,14 +1,14 @@
 import React from 'react'
-import { LauncherBtnPanel } from './ui/LauncherBtn'
-import { useLauncherBtnGesture } from './ui/LauncherBtnGesture'
-import LogicRendererBadge from './LogicRendererBadge'
-import LauncherUpdater from './LauncherUpdater'
-import LogicApiTester from './LogicApiTester'
+import { LauncherBtnPanel } from './LauncherBtn'
+import { useLauncherBtnGesture } from './LauncherBtnGesture'
+import MainScreenRendererBadge from './MainScreenRendererBadge'
+import MainScreenUpdater from './MainScreenUpdater'
+import MainScreenApiTester from './MainScreenApiTester'
 import LogicStage from './logic/LogicStage'
 import LogicStageDom from './logic/LogicStageDom'
 import { detectRenderer, type RendererMode } from './logic/LogicCapability'
 
-export type LauncherScreenProps = {
+export type MainScreenProps = {
   rendererMode?: RendererMode // 'auto' | 'pixi' | 'dom'
 }
 
@@ -16,7 +16,7 @@ export type LauncherScreenProps = {
  * Layar utama launcher yang menampilkan navigasi dock.
  * Logic renderer kompleks dihapus untuk sementara.
  */
-export default function LauncherScreen(props: LauncherScreenProps) {
+export default function MainScreen(props: MainScreenProps) {
   const mode = props.rendererMode ?? 'auto'
   const chosen = detectRenderer(mode)
   const gesture = useLauncherBtnGesture()
@@ -48,9 +48,9 @@ export default function LauncherScreen(props: LauncherScreenProps) {
         target="_self"
       />
       {/* Renderer badge and updater (hold with launcher) */}
-      <LogicRendererBadge visible={gesture.open} label={label} />
-      <LogicApiTester visible={gesture.open} />
-      <LauncherUpdater visible={gesture.open} />
+      <MainScreenRendererBadge visible={gesture.open} label={label} />
+      <MainScreenApiTester visible={gesture.open} />
+      <MainScreenUpdater visible={gesture.open} />
     </div>
   )
 }
