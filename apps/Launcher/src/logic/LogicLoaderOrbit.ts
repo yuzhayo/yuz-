@@ -2,7 +2,7 @@ import type { Application, Sprite } from "pixi.js";
 import type { BuiltLayer } from "./LogicTypes";
 import type { LayerConfig } from "./sceneTypes";
 import { clamp, clamp01, toRad, normDeg, clampRpm60 } from "./LogicMath";
-import { STAGE_WIDTH, STAGE_HEIGHT } from "../utils/stage-transform";
+import { STAGE_WIDTH, STAGE_HEIGHT } from "../utils/stage2048Module";
 
 export type OrbitItem = {
   sprite: Sprite;
