@@ -4,7 +4,7 @@
 This is a React-based monorepo containing multiple applications with a shared component library. The project uses Vite for build tooling, TypeScript for type safety, and Tailwind CSS for styling. The main application is a Launcher app built with Pixi.js for interactive graphics.
 
 ## Project Structure
-- **apps/Launcher/**: Main launcher application with Pixi.js-based interactive interface
+- **Launcher/**: Main launcher application with Pixi.js-based interactive interface (moved from apps/Launcher/)
 - **apps/0Setting/**: Settings module application  
 - **apps/1Meng/**: Meng module application
 - **apps/3Database/**: Database module application
@@ -37,6 +37,10 @@ The project is configured to work seamlessly in the Replit environment:
 - `npm run test`: Run Vitest test suite
 
 ## Recent Changes
+- **Directory Move**: Moved `apps/Launcher/` to root level as `Launcher/` while maintaining workspace module structure
+- Updated workspace configuration and scripts to reference new location (`-w Launcher`)
+- Fixed relative paths in configs after directory move (vite.config.ts, tsconfig.json, tailwind.config.js)
+- Corrected asset loading paths in LogicConfig.ts for proper image bundling
 - Fixed Vite configuration for Replit compatibility (`allowedHosts: true`)
 - Set up production deployment configuration for autoscale
 - Configured workflow for development on port 5000
