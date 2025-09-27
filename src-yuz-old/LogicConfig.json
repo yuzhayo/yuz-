@@ -1,0 +1,390 @@
+{
+  "layersID": [
+    "L10",
+    "L11",
+    "L12",
+    "L13",
+    "L14",
+    "L15",
+    "L16",
+    "L17",
+    "L18",
+    "L19",
+    "L20",
+    "L21",
+    "L22",
+    "L23",
+    "L24",
+    "L25",
+    "L26",
+    "L27",
+    "L28",
+    "L29",
+    "L30",
+    "L31",
+    "L32",
+    "L33",
+    "L34",
+    "L35",
+    "L36",
+    "L37",
+    "L38",
+    "L39",
+    "L40",
+    "L41",
+    "L42",
+    "L43",
+    "L44",
+    "L45",
+    "L46",
+    "L47",
+    "L48",
+    "L49",
+    "L50",
+    "L51",
+    "L52",
+    "L53",
+    "L54",
+    "L55",
+    "L56",
+    "L57",
+    "L58",
+    "L59",
+    "L60",
+    "L61",
+    "L62",
+    "L63",
+    "L64",
+    "L65",
+    "L66",
+    "L67",
+    "L68",
+    "L69",
+    "L70",
+    "L71",
+    "L72",
+    "L73",
+    "L74",
+    "L75",
+    "L76",
+    "L77",
+    "L78",
+    "L79",
+    "L80",
+    "L81",
+    "L82",
+    "L83",
+    "L84",
+    "L85",
+    "L86",
+    "L87",
+    "L88",
+    "L89",
+    "L90",
+    "L91",
+    "L92",
+    "L93",
+    "L94",
+    "L95",
+    "L96",
+    "L97",
+    "L98",
+    "L99"
+  ],
+  "imageRegistry": {
+    "a": "/asset/SAMPLE.png",
+    "STARBGHOLE": "/asset/STARBGHOLE1.png",
+    "STARBG": "/asset/STARBG.png",
+    "STAR1": "/asset/Enviro_Stars.png",
+    "STAR2": "/asset/Enviro_Stars_Big.png",
+    "GEAR1": "/asset/GEAR1.png",
+    "GEAR2": "/asset/GEAR2.png",
+    "GEAR3": "/asset/GEAR3.png",
+    "GEARMOON": "/asset/GEARMOON.png",
+    "BUBBLE": "/asset/BUBBLE.png",
+    "DESK": "/asset/AchieveMedal_Desk_Short02.png",
+    "SYSHEAD": "/asset/SystemMessageBg.png",
+    "GEAR6": "/asset/UI_Img_SlimeCannont_Pic_06.png",
+    "GEAR7": "/asset/UI_Img_SlimeCannont_Pic_07.png",
+    "GEAR8": "/asset/UI_Img_SlimeCannont_Pic_08.png",
+    "GREENDOTOFF": "/asset/Prestige_SlotBase_Off.png",
+    "GREENDOTON": "/asset/Prestige_SlotBase.png",
+    "LOCK": "/asset/V3_LockIcon.png",
+    "NOON": "/asset/UI_ClockIcon_Noon.png",
+    "DAWN": "/asset/UI_ClockIcon_Morning.png",
+    "DUSK": "/asset/UI_ClockIcon_Dusk.png",
+    "NIGHT": "/asset/UI_ClockIcon_Night.png",
+    "CLOCKGLOW": "/asset/CLOCKGLOW.png",
+    "CLOCKGLOW1": "/asset/CLOCKGLOW1.png",
+    "CLOCKGLOW2": "/asset/CLOCKGLOW2.png",
+    "CLOCKBG": "/asset/CLOCKBG.png",
+    "HAND1": "/asset/UI_Clock_HourHand.png",
+    "HAND2": "/asset/UI_Clock_MinuteHand.png"
+  },
+  "layers": [
+    {
+      "id": "L10",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "a"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 28
+      },
+      "spinRPM": 0,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L15",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "STARBG"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 64.3
+      },
+      "spinRPM": 0.3,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L16",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "GEAR1"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 160
+      },
+      "spinRPM": 1,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L17",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "GEAR2"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 81
+      },
+      "spinRPM": 1.5,
+      "spinDir": "ccw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L18",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "GEAR3"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 110
+      },
+      "spinRPM": 1.8,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L19",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "GEARMOON"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 80
+      },
+      "spinRPM": 1.6,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L20",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "GEAR1"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 50
+      },
+      "spinRPM": 1,
+      "spinDir": "ccw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L21",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "STARBGHOLE"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 64.3
+      },
+      "spinRPM": 0.3,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L22",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "STAR1"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 150
+      },
+      "spinRPM": 0.7,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L23",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "STAR2"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 130
+      },
+      "spinRPM": 0.5,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    },
+    {
+      "id": "L24",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "STAR2"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 100
+      },
+      "spinRPM": 0.5,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitOrientDeg": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null
+    },
+    {
+      "id": "L25",
+      "imageRef": {
+        "kind": "urlId",
+        "id": "a"
+      },
+      "position": {
+        "xPct": 50,
+        "yPct": 50
+      },
+      "scale": {
+        "pct": 100
+      },
+      "spinRPM": 0.5,
+      "spinDir": "cw",
+      "orbitRPM": null,
+      "orbitDir": null,
+      "orbitCenter": null,
+      "orbitPhaseDeg": null,
+      "orbitOrientPolicy": null,
+      "orbitOrientDeg": null
+    }
+  ]
+}
