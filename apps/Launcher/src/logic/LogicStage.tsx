@@ -1,5 +1,5 @@
 import React from 'react'
-import { PixiStageAdapter } from '../utils/stage-pixi-adapter'
+import { createStage2048 } from '../utils/stage2048Module'
 import { buildSceneFromLogic } from './logicLoader'
 import type { LogicConfig } from './sceneTypes'
 import logicConfigJson from './LogicConfig'
@@ -8,7 +8,7 @@ export default function LogicStage() {
   const ref = React.useRef<HTMLDivElement | null>(null)
 
   React.useEffect(() => {
-    let adapter: PixiStageAdapter | null = null
+    let stage: any = null
     let cleanupScene: (() => void) | undefined
 
     ;(async () => {
@@ -16,20 +16,18 @@ export default function LogicStage() {
       if (!el) return
 
       try {
-        // Create stage adapter with fixed 1024×1024 dimensions
-        adapter = new PixiStageAdapter({
+        // Create stage with 2048×2048 dimensions using the new module
+        stage = await createStage2048(el, {
           backgroundAlpha: 0,
           antialias: true,
-          debug: false // Set to true for development debugging
+          debug: false, // Set to true for development debugging
+          autoInjectCSS: true
         })
-
-        // Mount the Pixi stage
-        const { app } = await adapter.mount(el)
 
         // Build and add the scene
         const cfg = logicConfigJson as unknown as LogicConfig
-        const scene = await buildSceneFromLogic(app, cfg)
-        app.stage.addChild(scene.container)
+        const scene = await buildSceneFromLogic(stage.app, cfg)
+        stage.app.stage.addChild(scene.container)
 
         cleanupScene = () => {
           try { (scene.container as any)._cleanup?.() } catch {}
@@ -42,7 +40,7 @@ export default function LogicStage() {
 
    return () => {
       try { cleanupScene?.() } catch {}
-      try { adapter?.dispose() } catch {}
+      try { stage?.dispose() } catch {}
     }
   }, [])
 

@@ -17,7 +17,7 @@ import type { Application, Sprite } from 'pixi.js'
 import type { BuiltLayer } from './LogicTypes'
 import type { ClockConfig, ClockHand, LayerConfig } from './sceneTypes'
 import { clamp, toRad } from './LogicMath'
-import { STAGE_WIDTH, STAGE_HEIGHT } from '../utils/stage-transform'
+import { STAGE_WIDTH, STAGE_HEIGHT } from '../utils/stage2048Module'
 
 type Vec2 = { x: number; y: number }
 
