@@ -1,6 +1,6 @@
 import type { LogicConfig, LayerConfig } from "./sceneTypes";
 import type { BuiltLayer, BuildResult, GenericSprite, GenericApplication, GenericContainer } from "./LogicTypes";
-import { logicApplyBasicTransform, logicZIndexFor } from "./LogicLoaderBasic";
+import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
 import { createLayerSpinManager } from "./LayerSpin";
 import type { LayerSpinManager } from "./LayerSpin";
 import { createLayerClockManager } from "./LayerClock";
@@ -12,6 +12,95 @@ import type { LayerEffectManager, EffectHandler } from "./LayerEffect";
 
 // Re-export EffectHandler for external use
 export type { EffectHandler } from "./LayerEffect";
+
+// === INTERNAL UTILITY FUNCTIONS ===
+// Math utilities (moved from LogicMath.ts)
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function toDeg(rad: number): number {
+  return (rad * 180) / Math.PI;
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function clamp01(n: number): number {
+  return clamp(n, 0, 1);
+}
+
+function normDeg(deg: number): number {
+  const d = deg % 360;
+  return d < 0 ? d + 360 : d;
+}
+
+// Common RPM clamp (0..60), accepts number-like or null/undefined
+function clampRpm60(v: unknown): number {
+  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.min(60, Math.max(0, n));
+}
+
+// WebGL capability check and renderer detection (moved from LogicCapability.ts)
+export type RendererMode = "auto" | "pixi" | "dom";
+
+function isWebGLAvailable(): boolean {
+  try {
+    const c = document.createElement("canvas");
+    return !!(c.getContext("webgl2") || c.getContext("webgl"));
+  } catch {
+    return false;
+  }
+}
+
+function getOverride(): "pixi" | "dom" | null {
+  try {
+    const sp = new URLSearchParams(window.location.search);
+    const q = sp.get("renderer");
+    if (q === "pixi" || q === "dom") return q;
+  } catch {}
+  try {
+    const ls = localStorage.getItem("renderer");
+    if (ls === "pixi" || ls === "dom") return ls;
+  } catch {}
+  return null;
+}
+
+export function detectRenderer(mode: RendererMode = "auto"): "pixi" | "dom" {
+  if (mode === "pixi" || mode === "dom") return mode;
+  const ov = getOverride();
+  if (ov) return ov;
+  // Conservative: prefer Pixi if WebGL exists; else DOM
+  return isWebGLAvailable() ? "pixi" : "dom";
+}
+
+// Basic placement & ordering helpers (moved from LogicLoaderBasic.ts)
+function logicZIndexFor(cfg: LayerConfig): number {
+  const m = cfg.id.match(/\d+/);
+  return m ? parseInt(m[0], 10) : 0;
+}
+
+function logicApplyBasicTransform(app: GenericApplication, sp: GenericSprite, cfg: LayerConfig) {
+  const w = STAGE_WIDTH;
+  const h = STAGE_HEIGHT;
+  const xPct = cfg.position.xPct ?? 0;
+  const yPct = cfg.position.yPct ?? 0;
+  sp.x = (xPct / 100) * w;
+  sp.y = (yPct / 100) * h;
+  const s = (cfg.scale?.pct ?? 100) / 100;
+  if (typeof sp.scale === 'object' && 'set' in sp.scale && typeof sp.scale.set === 'function') {
+    sp.scale.set(s, s);
+  } else {
+    sp.scale.x = s;
+    sp.scale.y = s;
+  }
+  sp.rotation = toRad(cfg.angleDeg ?? 0);
+  if (sp.zIndex !== undefined) {
+    sp.zIndex = logicZIndexFor(cfg);
+  }
+}
 
 // Engine-agnostic type definitions for LayerCreator module
 export type LayerCreatorItem = {
@@ -338,5 +427,16 @@ export function createCreatorManager(): LayerCreatorManager {
   return createLayerCreatorManager();
 }
 
-// Re-export utilities for convenience
-export { logicZIndexFor, logicApplyBasicTransform } from "./LogicLoaderBasic";
+// Export utilities for external access - these are the consolidated utilities from multiple files
+export { 
+  toRad, 
+  toDeg, 
+  clamp, 
+  clamp01, 
+  clampRpm60, 
+  normDeg, 
+  isWebGLAvailable,
+  logicZIndexFor, 
+  logicApplyBasicTransform 
+};
+

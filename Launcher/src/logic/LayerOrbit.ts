@@ -1,7 +1,7 @@
 import type { GenericApplication, GenericSprite } from "./LogicTypes";
 import type { BuiltLayer } from "./LogicTypes";
 import type { LayerConfig } from "./sceneTypes";
-import { clampRpm60, clamp, clamp01, toRad, normDeg } from "./LogicMath";
+import { clampRpm60, clamp, clamp01, toRad, normDeg } from "./LayerCreator";
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
 
 // Internal orbit math functions (moved from OrbitMath.ts)

@@ -1,66 +1,33 @@
 import { Application, Assets, Container, Sprite } from "pixi.js";
 import type { LogicConfig, LayerConfig } from "./sceneTypes";
 import type { BuiltLayer, LogicEngine, EngineOptions, EngineHandle, GenericSprite } from "./LogicTypes";
-import type { EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec } from "./LayerEffect";
+import type { EffectHandler } from "./LayerEffect";
+import type {
+  GlowSpec,
+  BloomSpec,
+  AdvancedEffectSpec,
+  LayerEffectItem,
+  BasicEffectSpec,
+  FadeSpec,
+  PulseSpec,
+  TiltSpec,
+  DistortSpec,
+  ShockwaveSpec
+} from "./LayerEffect";
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
+import {
+  toRad,
+  toDeg,
+  clamp,
+  clamp01,
+  normDeg,
+  clampRpm60,
+  isWebGLAvailable,
+  logicZIndexFor,
+  logicApplyBasicTransform
+} from "./LayerCreator";
 
-// === EMBEDDED MATH UTILITIES ===
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function toDeg(rad: number): number {
-  return (rad * 180) / Math.PI;
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-function clamp01(n: number): number {
-  return clamp(n, 0, 1);
-}
-
-function normDeg(deg: number): number {
-  const d = deg % 360;
-  return d < 0 ? d + 360 : d;
-}
-
-// Common RPM clamp (0..60), accepts number-like or null/undefined
-function clampRpm60(v: unknown): number {
-  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
-  if (!isFinite(n) || n <= 0) return 0;
-  return Math.min(60, Math.max(0, n));
-}
-
-// === EMBEDDED BASIC HELPERS ===
-function logicZIndexFor(cfg: LayerConfig): number {
-  const m = cfg.id.match(/\d+/);
-  return m ? parseInt(m[0], 10) : 0;
-}
-
-function logicApplyBasicTransform(app: Application, sp: Sprite, cfg: LayerConfig) {
-  const w = STAGE_WIDTH;
-  const h = STAGE_HEIGHT;
-  const xPct = cfg.position.xPct ?? 0;
-  const yPct = cfg.position.yPct ?? 0;
-  sp.x = (xPct / 100) * w;
-  sp.y = (yPct / 100) * h;
-  const s = (cfg.scale?.pct ?? 100) / 100;
-  sp.scale.set(s, s);
-  sp.rotation = toRad(cfg.angleDeg ?? 0);
-  sp.zIndex = logicZIndexFor(cfg);
-}
-
-// === EMBEDDED WEBGL CAPABILITY CHECK ===
-function isWebGLAvailable(): boolean {
-  try {
-    const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
-  } catch {
-    return false;
-  }
-}
+// Math utilities and other helpers are now imported from LayerCreator.ts
 
 // === PIXI APPLICATION DETECTION ===
 export function isPixiApplication(app: any): boolean {
@@ -466,60 +433,7 @@ function createLayerOrbitManager(): LayerOrbitManager {
 }
 
 // === EMBEDDED LAYER EFFECT MANAGER ===
-type FadeSpec = {
-  type: "fade";
-  from: number;
-  to: number;
-  durationMs: number;
-  loop: boolean;
-  easing: "linear" | "sineInOut";
-};
-
-type PulseSpec = {
-  type: "pulse";
-  property: "scale" | "alpha";
-  amp: number;
-  periodMs: number;
-  phaseDeg: number;
-};
-
-type TiltSpec = {
-  type: "tilt";
-  mode: "pointer" | "device" | "time";
-  axis: "both" | "x" | "y";
-  maxDeg: number;
-  periodMs?: number;
-};
-
-type BasicEffectSpec = FadeSpec | PulseSpec | TiltSpec;
-
-type GlowSpec = {
-  type: "glow";
-  color: number;
-  alpha: number;
-  scale: number;
-  pulseMs?: number;
-};
-
-type BloomSpec = {
-  type: "bloom";
-  strength: number;
-};
-
-type DistortSpec = {
-  type: "distort";
-  ampPx: number;
-  speed: number;
-};
-
-type ShockwaveSpec = {
-  type: "shockwave";
-  periodMs: number;
-  maxScale: number;
-  fade: boolean;
-};
-
-type AdvancedEffectSpec = GlowSpec | BloomSpec | DistortSpec | ShockwaveSpec;
+// Note: GlowSpec, BloomSpec, AdvancedEffectSpec are now imported from LayerEffect.ts
 
 type Aura = {
   sprite: Sprite;
@@ -544,17 +458,6 @@ type Shock = {
   baseScale: number; 
 };
 
-type LayerEffectItem = {
-  spriteIdx: number;
-  basicSpecs: BasicEffectSpec[];
-  advancedSpecs: AdvancedEffectSpec[];
-  baseAlpha: number;
-  baseScale: number;
-  prevTiltRad?: number;
-  auras: Aura[];
-  distort?: Distort;
-  shock?: Shock;
-};
 
 interface LayerEffectManager {
   init(app: Application, built: BuiltLayer[]): void;
@@ -1726,4 +1629,14 @@ export function createEngine(): PixiEngine {
 }
 
 // Re-export utilities for convenience
-export { logicZIndexFor, logicApplyBasicTransform } from "./LogicLoaderBasic";
+export {
+  toRad,
+  toDeg,
+  clamp,
+  clamp01,
+  normDeg,
+  clampRpm60,
+  isWebGLAvailable,
+  logicZIndexFor,
+  logicApplyBasicTransform
+} from "./LayerCreator";

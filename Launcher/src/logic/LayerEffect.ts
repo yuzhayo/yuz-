@@ -1,9 +1,9 @@
 import type { BuiltLayer, GenericSprite, GenericApplication } from "./LogicTypes";
 import type { LayerConfig } from "./sceneTypes";
-import { isWebGLAvailable } from "./LogicCapability";
+import { isWebGLAvailable } from "./LayerCreator";
 
 // Basic effect type definitions
-type FadeSpec = {
+export type FadeSpec = {
   type: "fade";
   from: number;
   to: number;
@@ -12,7 +12,7 @@ type FadeSpec = {
   easing: "linear" | "sineInOut";
 };
 
-type PulseSpec = {
+export type PulseSpec = {
   type: "pulse";
   property: "scale" | "alpha";
   amp: number;
@@ -20,7 +20,7 @@ type PulseSpec = {
   phaseDeg: number;
 };
 
-type TiltSpec = {
+export type TiltSpec = {
   type: "tilt";
   mode: "pointer" | "device" | "time";
   axis: "both" | "x" | "y";
@@ -28,7 +28,7 @@ type TiltSpec = {
   periodMs?: number;
 };
 
-type BasicEffectSpec = FadeSpec | PulseSpec | TiltSpec;
+export type BasicEffectSpec = FadeSpec | PulseSpec | TiltSpec;
 
 // Advanced effect type definitions
 export type GlowSpec = {
@@ -44,13 +44,13 @@ export type BloomSpec = {
   strength: number;
 };
 
-type DistortSpec = {
+export type DistortSpec = {
   type: "distort";
   ampPx: number;
   speed: number;
 };
 
-type ShockwaveSpec = {
+export type ShockwaveSpec = {
   type: "shockwave";
   periodMs: number;
   maxScale: number;
@@ -521,4 +521,4 @@ export function createEffectManager(): LayerEffectManager {
 }
 
 // Re-export utilities for convenience
-export { isWebGLAvailable } from "./LogicCapability";
+export { isWebGLAvailable } from "./LayerCreator";

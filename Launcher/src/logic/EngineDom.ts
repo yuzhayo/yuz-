@@ -1,9 +1,8 @@
 import type { ClockHand, ClockHandSelection, LogicConfig, LayerConfig } from "./sceneTypes";
 import type { LogicEngine, EngineOptions, EngineHandle, GenericSprite } from "./LogicTypes";
 import type { EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec } from "./LayerEffect";
-import { clamp, clamp01, clampRpm60, toRad } from "./LogicMath";
+import { clamp, clamp01, clampRpm60, toRad, logicZIndexFor } from "./LayerCreator";
 import { projectToRectBorder } from "./LayerOrbit";
-import { logicZIndexFor } from "./LogicLoaderBasic";
 import { computeBasicEffectState } from "./LayerEffect";
 
 // DOM-specific engine options
@@ -650,6 +649,6 @@ export function createEngine(): DomEngine {
 }
 
 // Re-export utilities for convenience
-export { logicZIndexFor } from "./LogicLoaderBasic";
+export { logicZIndexFor } from "./LayerCreator";
 export { projectToRectBorder } from "./LayerOrbit";
 export { computeBasicEffectState } from "./LayerEffect";

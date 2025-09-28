@@ -16,8 +16,9 @@ function debugClock(layerId: string, ...data: unknown[]) {
 import type { GenericSprite, GenericApplication } from "./LogicTypes";
 import type { BuiltLayer } from "./LogicTypes";
 import type { ClockConfig, ClockHand, LayerConfig } from "./sceneTypes";
-import { clamp, toRad } from "./LogicMath";
+import { clamp, toRad } from "./LayerCreator";
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
+import type { Application } from "pixi.js";
 
 // Type definitions
 export type Vec2 = { x: number; y: number };

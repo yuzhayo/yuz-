@@ -1,5 +1,5 @@
 import type { BuiltLayer, GenericSprite, GenericApplication } from "./LogicTypes";
-import { clampRpm60 } from "./LogicMath";
+import { clampRpm60 } from "./LayerCreator";
 
 // Basic RPM-based spin item
 export type BasicSpinItem = {
@@ -95,4 +95,4 @@ export function createSpinManager(): LayerSpinManager {
 }
 
 // Re-export math utilities for convenience
-export { clampRpm60 } from "./LogicMath";
+export { clampRpm60 } from "./LayerCreator";

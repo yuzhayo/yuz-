@@ -6,7 +6,7 @@ import MainScreenUpdater from "./MainScreenUpdater";
 import MainScreenApiTester from "./MainScreenApiTester";
 import LogicStage from "./logic/LogicStage";
 import LogicRenderer from "./logic/LogicRenderer";
-import { detectRenderer, type RendererMode } from "./logic/LogicCapability";
+import { detectRenderer, type RendererMode } from "./logic/LayerCreator";
 import logicConfigJson from "./LogicConfig";
 import type { LogicConfig } from "./logic/sceneTypes";
 
