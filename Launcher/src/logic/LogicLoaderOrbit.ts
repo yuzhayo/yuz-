@@ -18,7 +18,14 @@ export type OrbitItem = {
   spinRpm: number;
 };
 
-function projectToRectBorder(cx: number, cy: number, x: number, y: number, w: number, h: number): { x: number; y: number } {
+function projectToRectBorder(
+  cx: number,
+  cy: number,
+  x: number,
+  y: number,
+  w: number,
+  h: number,
+): { x: number; y: number } {
   if (x >= 0 && x <= w && y >= 0 && y <= h) return { x, y };
   const dx = x - cx;
   const dy = y - cy;
@@ -50,7 +57,11 @@ function projectToRectBorder(cx: number, cy: number, x: number, y: number, w: nu
   return { x: first.x, y: first.y };
 }
 
-export function buildOrbit(_app: Application, built: BuiltLayer[], spinRpmBySprite: Map<Sprite, number>) {
+export function buildOrbit(
+  _app: Application,
+  built: BuiltLayer[],
+  spinRpmBySprite: Map<Sprite, number>,
+) {
   const items: OrbitItem[] = [];
 
   for (const b of built) {
@@ -61,9 +72,9 @@ export function buildOrbit(_app: Application, built: BuiltLayer[], spinRpmBySpri
       const c = b.cfg.orbitCenter || { xPct: 50, yPct: 50 };
       const centerPct = {
         x: clamp(c.xPct ?? 50, 0, 100),
-        y: clamp(c.yPct ?? 50, 0, 100)
+        y: clamp(c.yPct ?? 50, 0, 100),
       };
-      const dir = (b.cfg.orbitDir === "ccw") ? -1 : (1 as 1 | -1);
+      const dir = b.cfg.orbitDir === "ccw" ? -1 : (1 as 1 | -1);
       const w = STAGE_WIDTH;
       const h = STAGE_HEIGHT;
       const cx = w * (centerPct.x / 100);
@@ -75,14 +86,16 @@ export function buildOrbit(_app: Application, built: BuiltLayer[], spinRpmBySpri
       if (r <= 0) continue;
 
       const phaseDeg = b.cfg.orbitPhaseDeg;
-      const phase = typeof phaseDeg === "number" && isFinite(phaseDeg)
-        ? toRad(normDeg(phaseDeg))
-        : Math.atan2(start.y - cy, start.x - cx);
+      const phase =
+        typeof phaseDeg === "number" && isFinite(phaseDeg)
+          ? toRad(normDeg(phaseDeg))
+          : Math.atan2(start.y - cy, start.x - cx);
       const radPerSec = (rpm * Math.PI) / 30;
       const policy = (b.cfg.orbitOrientPolicy ?? "none") as "none" | "auto" | "override";
-      const orientDeg = typeof b.cfg.orbitOrientDeg === "number" && isFinite(b.cfg.orbitOrientDeg)
-        ? b.cfg.orbitOrientDeg
-        : 0;
+      const orientDeg =
+        typeof b.cfg.orbitOrientDeg === "number" && isFinite(b.cfg.orbitOrientDeg)
+          ? b.cfg.orbitOrientDeg
+          : 0;
       const orientRad = toRad(normDeg(orientDeg));
       const spinRpm = spinRpmBySprite.get(b.sprite) ?? 0;
       items.push({
@@ -96,7 +109,7 @@ export function buildOrbit(_app: Application, built: BuiltLayer[], spinRpmBySpri
         basePhase: phase,
         orientPolicy: policy,
         orientDegRad: orientRad,
-        spinRpm
+        spinRpm,
       });
     }
   }
@@ -137,4 +150,3 @@ export function buildOrbit(_app: Application, built: BuiltLayer[], spinRpmBySpri
 
   return { items, recompute, tick };
 }
-

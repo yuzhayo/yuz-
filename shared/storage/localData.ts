@@ -26,7 +26,7 @@ type DataStore = {
 
 let memoryStore: DataStore = {
   module_submissions: [],
-  user_configs: []
+  user_configs: [],
 };
 
 function deepClone<T>(value: T): T {
@@ -50,13 +50,15 @@ function normaliseModuleSubmission(entry: any): ModuleSubmissionRecord {
     id: String(entry?.id ?? ""),
     user_id: String(entry?.user_id ?? ""),
     module_name: String(entry?.module_name ?? ""),
-    submission_data: typeof entry?.submission_data === "object" && entry?.submission_data !== null
-      ? deepClone(entry.submission_data as Record<string, unknown>)
-      : {},
-    submission_status: entry?.submission_status !== undefined && entry?.submission_status !== null
-      ? String(entry.submission_status)
-      : undefined,
-    created_at: typeof entry?.created_at === "string" ? entry.created_at : new Date().toISOString()
+    submission_data:
+      typeof entry?.submission_data === "object" && entry?.submission_data !== null
+        ? deepClone(entry.submission_data as Record<string, unknown>)
+        : {},
+    submission_status:
+      entry?.submission_status !== undefined && entry?.submission_status !== null
+        ? String(entry.submission_status)
+        : undefined,
+    created_at: typeof entry?.created_at === "string" ? entry.created_at : new Date().toISOString(),
   };
 }
 
@@ -66,10 +68,11 @@ function normaliseUserConfig(entry: any): UserConfigRecord {
     user_id: String(entry?.user_id ?? ""),
     profile_name: String(entry?.profile_name ?? ""),
     config_type: String(entry?.config_type ?? ""),
-    config_data: typeof entry?.config_data === "object" && entry?.config_data !== null
-      ? deepClone(entry.config_data as Record<string, unknown>)
-      : {},
-    updated_at: typeof entry?.updated_at === "string" ? entry.updated_at : new Date().toISOString()
+    config_data:
+      typeof entry?.config_data === "object" && entry?.config_data !== null
+        ? deepClone(entry.config_data as Record<string, unknown>)
+        : {},
+    updated_at: typeof entry?.updated_at === "string" ? entry.updated_at : new Date().toISOString(),
   };
 }
 
@@ -122,7 +125,9 @@ function generateId(): string {
   return `local-${Math.random().toString(36).slice(2)}-${Date.now().toString(36)}`;
 }
 
-export async function listModuleSubmissions(filter?: { moduleName?: string }): Promise<ModuleSubmissionRecord[]> {
+export async function listModuleSubmissions(filter?: {
+  moduleName?: string;
+}): Promise<ModuleSubmissionRecord[]> {
   const store = readStore();
   const rows = filter?.moduleName
     ? store.module_submissions.filter((row) => row.module_name === filter.moduleName)
@@ -143,7 +148,7 @@ export async function insertModuleSubmission(entry: {
     module_name: entry.module_name,
     submission_data: deepClone(entry.submission_data),
     submission_status: entry.submission_status,
-    created_at: new Date().toISOString()
+    created_at: new Date().toISOString(),
   };
   store.module_submissions = [record, ...store.module_submissions];
   writeStore(store);
@@ -177,7 +182,7 @@ export async function upsertUserConfig(entry: {
     (row) =>
       row.user_id === entry.user_id &&
       row.profile_name === entry.profile_name &&
-      row.config_type === entry.config_type
+      row.config_type === entry.config_type,
   );
   const existing = existingIndex >= 0 ? store.user_configs[existingIndex] : undefined;
   const record: UserConfigRecord = {
@@ -186,7 +191,7 @@ export async function upsertUserConfig(entry: {
     profile_name: entry.profile_name,
     config_type: entry.config_type,
     config_data: deepClone(entry.config_data),
-    updated_at: now
+    updated_at: now,
   };
   if (existingIndex >= 0) {
     store.user_configs[existingIndex] = record;

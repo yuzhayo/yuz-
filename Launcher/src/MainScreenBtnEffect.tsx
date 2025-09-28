@@ -1,4 +1,4 @@
-import type { CSSProperties } from 'react'
+import type { CSSProperties } from "react";
 
 /**
  * LauncherBtnEffect
@@ -12,28 +12,28 @@ import type { CSSProperties } from 'react'
  * - Tidak ada dependency eksternal selain React & Tailwind (kelas util).
  */
 
-export type MainScreenBtnEffectKind = 'none' | 'fade' | 'pulse' | 'glow'
+export type MainScreenBtnEffectKind = "none" | "fade" | "pulse" | "glow";
 
 export type MainScreenBtnEffectConfig = {
-  kind?: MainScreenBtnEffectKind
-  intensity?: number // 0..1 (opsional; reserved)
-}
+  kind?: MainScreenBtnEffectKind;
+  intensity?: number; // 0..1 (opsional; reserved)
+};
 
 /** State dari panel tombol, bisa dipakai untuk memicu anim. */
 export type MainScreenBtnEffectState = {
-  open: boolean
-  hovering?: boolean
-  pressing?: boolean
-}
+  open: boolean;
+  hovering?: boolean;
+  pressing?: boolean;
+};
 
 /** Keluaran visual untuk dipakai di <LauncherBtn /> */
 export type MainScreenBtnVisual = {
-  panelClass: string
-  panelStyle?: CSSProperties
-  buttonClass: string
-  buttonStyle?: CSSProperties
-  badgeClass: string
-}
+  panelClass: string;
+  panelStyle?: CSSProperties;
+  buttonClass: string;
+  buttonStyle?: CSSProperties;
+  badgeClass: string;
+};
 
 /**
  * Hook efek visual. Saat ini stub "none" dengan styling aman.
@@ -41,53 +41,53 @@ export type MainScreenBtnVisual = {
  */
 export function useMainScreenBtnEffect(
   state: MainScreenBtnEffectState,
-  cfg?: MainScreenBtnEffectConfig
+  cfg?: MainScreenBtnEffectConfig,
 ): MainScreenBtnVisual {
-  const kind = cfg?.kind ?? 'none'
+  const kind = cfg?.kind ?? "none";
 
   // Base styles aman (dark UI)
   const basePanel =
-    'pointer-events-auto fixed bottom-4 right-4 z-[9999] ' +
-    'bg-neutral-900/80 backdrop-blur-md border border-neutral-800 ' +
-    'rounded-2xl shadow-lg px-3 py-2 flex items-center gap-2'
+    "pointer-events-auto fixed bottom-4 right-4 z-[9999] " +
+    "bg-neutral-900/80 backdrop-blur-md border border-neutral-800 " +
+    "rounded-2xl shadow-lg px-3 py-2 flex items-center gap-2";
 
   const baseButton =
-    'btn inline-flex items-center gap-2 px-3 py-1.5 rounded-xl ' +
-    'bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 ' +
-    'text-sm leading-none'
+    "btn inline-flex items-center gap-2 px-3 py-1.5 rounded-xl " +
+    "bg-neutral-800 hover:bg-neutral-700 active:bg-neutral-600 " +
+    "text-sm leading-none";
 
   const baseBadge =
-    'badge text-[10px] px-2 py-0.5 rounded bg-neutral-800/70 border border-neutral-700'
+    "badge text-[10px] px-2 py-0.5 rounded bg-neutral-800/70 border border-neutral-700";
 
   // Variasi sederhana (placeholder). Tidak mengubah flow logic.
-  if (kind === 'glow') {
+  if (kind === "glow") {
     return {
-      panelClass: basePanel + ' ring-1 ring-pink-400/25',
-      panelStyle: state.open ? { boxShadow: '0 0 24px rgba(236,72,153,0.25)' } : undefined,
-      buttonClass: baseButton + ' ring-1 ring-pink-400/20',
-      buttonStyle: state.hovering ? { boxShadow: '0 0 12px rgba(236,72,153,0.35)' } : undefined,
-      badgeClass: baseBadge
-    }
+      panelClass: basePanel + " ring-1 ring-pink-400/25",
+      panelStyle: state.open ? { boxShadow: "0 0 24px rgba(236,72,153,0.25)" } : undefined,
+      buttonClass: baseButton + " ring-1 ring-pink-400/20",
+      buttonStyle: state.hovering ? { boxShadow: "0 0 12px rgba(236,72,153,0.35)" } : undefined,
+      badgeClass: baseBadge,
+    };
   }
 
-  if (kind === 'pulse') {
+  if (kind === "pulse") {
     return {
       panelClass: basePanel,
-      panelStyle: state.open ? { animation: 'pulse 1.5s ease-in-out infinite' } : undefined,
+      panelStyle: state.open ? { animation: "pulse 1.5s ease-in-out infinite" } : undefined,
       buttonClass: baseButton,
-      buttonStyle: state.pressing ? { transform: 'scale(0.98)' } : undefined,
-      badgeClass: baseBadge
-    }
+      buttonStyle: state.pressing ? { transform: "scale(0.98)" } : undefined,
+      badgeClass: baseBadge,
+    };
   }
 
-  if (kind === 'fade') {
+  if (kind === "fade") {
     return {
       panelClass: basePanel,
-      panelStyle: { opacity: state.open ? 1 : 0.85, transition: 'opacity 160ms ease' },
+      panelStyle: { opacity: state.open ? 1 : 0.85, transition: "opacity 160ms ease" },
       buttonClass: baseButton,
       buttonStyle: undefined,
-      badgeClass: baseBadge
-    }
+      badgeClass: baseBadge,
+    };
   }
 
   // kind === 'none' (default)
@@ -96,8 +96,6 @@ export function useMainScreenBtnEffect(
     panelStyle: undefined,
     buttonClass: baseButton,
     buttonStyle: undefined,
-    badgeClass: baseBadge
-  }
+    badgeClass: baseBadge,
+  };
 }
-
-

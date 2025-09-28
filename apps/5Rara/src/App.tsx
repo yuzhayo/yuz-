@@ -1,12 +1,12 @@
-﻿import React, { useEffect, useMemo, useState } from 'react';
-import { usePasskeySession } from '@shared/PasskeySession';
+﻿import React, { useEffect, useMemo, useState } from "react";
+import { usePasskeySession } from "@shared/PasskeySession";
 import {
   insertModuleSubmission,
   listModuleSubmissions,
-  type ModuleSubmissionRecord
-} from '@shared/storage/localData';
+  type ModuleSubmissionRecord,
+} from "@shared/storage/localData";
 
-const MODULE_NAME = '5Rara';
+const MODULE_NAME = "5Rara";
 
 type TrackingRow = ModuleSubmissionRecord;
 
@@ -17,13 +17,13 @@ type FormState = {
 };
 
 const defaultForm: FormState = {
-  task: '',
-  minutes: '',
-  mood: 'senang'
+  task: "",
+  minutes: "",
+  mood: "senang",
 };
 
 export default function App() {
-  const { status, session } = usePasskeySession({ moduleId: 'm5_rara' });
+  const { status, session } = usePasskeySession({ moduleId: "m5_rara" });
   const [entries, setEntries] = useState<TrackingRow[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function App() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated' && session) {
+    if (status === "authenticated" && session) {
       void loadEntries();
     }
   }, [status, session]);
@@ -43,8 +43,8 @@ export default function App() {
       const data = await listModuleSubmissions({ moduleName: MODULE_NAME });
       setEntries(data);
     } catch (err) {
-      console.error('[5Rara] Failed to load submissions', err);
-      setError('Tidak dapat memuat data lokal');
+      console.error("[5Rara] Failed to load submissions", err);
+      setError("Tidak dapat memuat data lokal");
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export default function App() {
     if (!session) return;
     const minutes = Number(form.minutes);
     if (Number.isNaN(minutes) || minutes <= 0) {
-      setError('Durasi harus angka positif (menit)');
+      setError("Durasi harus angka positif (menit)");
       return;
     }
     setLoading(true);
@@ -68,15 +68,15 @@ export default function App() {
         submission_data: {
           task: form.task,
           minutes,
-          mood: form.mood
-        }
+          mood: form.mood,
+        },
       });
-      setMessage('Catatan waktu tersimpan');
+      setMessage("Catatan waktu tersimpan");
       setForm(defaultForm);
       await loadEntries();
     } catch (err) {
-      console.error('[5Rara] Failed to save submission', err);
-      setError('Gagal menyimpan catatan');
+      console.error("[5Rara] Failed to save submission", err);
+      setError("Gagal menyimpan catatan");
     } finally {
       setLoading(false);
     }
@@ -84,10 +84,10 @@ export default function App() {
 
   const totalMinutes = useMemo(
     () => entries.reduce((sum, entry) => sum + (Number(entry.submission_data.minutes) || 0), 0),
-    [entries]
+    [entries],
   );
 
-  if (status === 'checking' || !session) {
+  if (status === "checking" || !session) {
     return (
       <div className="app-shell flex items-center justify-center">
         <p className="text-neutral-400">Menyiapkan modul...</p>
@@ -142,7 +142,7 @@ export default function App() {
                 className="rounded-md bg-sky-500 px-4 py-2 text-sm font-semibold text-white hover:bg-sky-400 disabled:opacity-60"
                 disabled={loading}
               >
-                {loading ? 'Menyimpan...' : 'Simpan'}
+                {loading ? "Menyimpan..." : "Simpan"}
               </button>
               {message && <span className="text-sm text-green-400">{message}</span>}
               {error && <span className="text-sm text-red-400">{error}</span>}
@@ -159,13 +159,20 @@ export default function App() {
           ) : (
             <ul className="mt-3 space-y-3 text-sm text-neutral-300">
               {entries.map((entry) => (
-                <li key={entry.id} className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3">
+                <li
+                  key={entry.id}
+                  className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3"
+                >
                   <div className="flex items-center justify-between text-xs text-neutral-500">
-                    <span>{new Date(entry.created_at).toLocaleString('id-ID')}</span>
+                    <span>{new Date(entry.created_at).toLocaleString("id-ID")}</span>
                     <span>{Number(entry.submission_data.minutes) || 0} menit</span>
                   </div>
-                  <p className="mt-1 text-sm font-medium text-neutral-100">{(entry.submission_data.task as string) || 'Tanpa judul'}</p>
-                  <p className="text-xs text-neutral-400">Mood: {(entry.submission_data.mood as string) || 'tidak diketahui'}</p>
+                  <p className="mt-1 text-sm font-medium text-neutral-100">
+                    {(entry.submission_data.task as string) || "Tanpa judul"}
+                  </p>
+                  <p className="text-xs text-neutral-400">
+                    Mood: {(entry.submission_data.mood as string) || "tidak diketahui"}
+                  </p>
                 </li>
               ))}
             </ul>

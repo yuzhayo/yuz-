@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from "react";
 
 // Constants
-const SESSION_PREFIX = 'yuzha:passkey-session:';
-const SESSION_EVENT = 'yuzha:passkey-session:changed';
+const SESSION_PREFIX = "yuzha:passkey-session:";
+const SESSION_EVENT = "yuzha:passkey-session:changed";
 
 // Types
 type SessionEventDetail = {
@@ -18,7 +18,7 @@ export type Session = {
   createdAt: string;
 };
 
-type Status = 'checking' | 'authenticated' | 'unauthenticated';
+type Status = "checking" | "authenticated" | "unauthenticated";
 
 type PasskeyState = {
   status: Status;
@@ -38,7 +38,7 @@ let memorySessions: Record<string, Session | undefined> = {};
 
 // Utility functions
 function deepClone<T>(value: T): T {
-  if (typeof globalThis.structuredClone === 'function') {
+  if (typeof globalThis.structuredClone === "function") {
     return globalThis.structuredClone(value);
   }
   return JSON.parse(JSON.stringify(value));
@@ -46,7 +46,7 @@ function deepClone<T>(value: T): T {
 
 function safeSessionStorage(): Storage | null {
   try {
-    if (typeof window === 'undefined') return null;
+    if (typeof window === "undefined") return null;
     return window.sessionStorage;
   } catch {
     return null;
@@ -54,7 +54,7 @@ function safeSessionStorage(): Storage | null {
 }
 
 function getSessionKey(moduleId?: string): string {
-  return `${SESSION_PREFIX}${moduleId ?? 'global'}`;
+  return `${SESSION_PREFIX}${moduleId ?? "global"}`;
 }
 
 function hashValue(value: string): string {
@@ -66,7 +66,7 @@ function hashValue(value: string): string {
 }
 
 function createUserId(passkey: string, moduleId?: string): string {
-  return `local-${moduleId ?? 'global'}-${hashValue(passkey)}`;
+  return `local-${moduleId ?? "global"}-${hashValue(passkey)}`;
 }
 
 function readRawSession(moduleId?: string): Session | null {
@@ -105,13 +105,15 @@ function writeRawSession(session: Session | null, moduleId?: string): void {
 }
 
 function notifySessionChange(moduleId?: string): void {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new CustomEvent<SessionEventDetail>(SESSION_EVENT, { detail: { moduleId } }));
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(
+      new CustomEvent<SessionEventDetail>(SESSION_EVENT, { detail: { moduleId } }),
+    );
   }
 }
 
 function translateValidationError(message: string | null | undefined): string {
-  if (!message) return 'Gagal memverifikasi passkey';
+  if (!message) return "Gagal memverifikasi passkey";
   return message;
 }
 
@@ -123,20 +125,20 @@ export function getActiveSession(moduleId?: string): Session | null {
 
 export async function signInWithPasskey(
   passkey: string,
-  moduleId?: string
+  moduleId?: string,
 ): Promise<{ session: Session | null; error?: string }> {
   const trimmed = passkey.trim();
   if (!trimmed) {
-    return { session: null, error: 'Passkey tidak boleh kosong' };
+    return { session: null, error: "Passkey tidak boleh kosong" };
   }
 
   const session: Session = {
     moduleId,
     user: {
       id: createUserId(trimmed, moduleId),
-      passkey: trimmed
+      passkey: trimmed,
     },
-    createdAt: new Date().toISOString()
+    createdAt: new Date().toISOString(),
   };
   writeRawSession(session, moduleId);
   return { session: deepClone(session) };
@@ -147,7 +149,7 @@ export async function signOut(moduleId?: string): Promise<void> {
 }
 
 export function subscribeToSessionChanges(listener: () => void, moduleId?: string): () => void {
-  if (typeof window === 'undefined') {
+  if (typeof window === "undefined") {
     return () => {};
   }
   const handler = (event: Event) => {
@@ -169,17 +171,17 @@ export function clearSession(moduleId?: string): void {
 export function clearAllSessions(): void {
   const keys = Object.keys(memorySessions);
   for (const key of keys) {
-    writeRawSession(null, key.replace(SESSION_PREFIX, '') || undefined);
+    writeRawSession(null, key.replace(SESSION_PREFIX, "") || undefined);
   }
 }
 
 // React hook
 export function usePasskeySession(options: Options = {}): PasskeyState {
   const { moduleId, requirePasskey = false } = options;
-  const [status, setStatus] = useState<Status>('checking');
+  const [status, setStatus] = useState<Status>("checking");
   const [session, setSession] = useState<Session | null>(() => getActiveSession(moduleId));
   const [error, setError] = useState<string | null>(null);
-  const autoPasskey = requirePasskey ? null : `auto-${moduleId ?? 'global'}`;
+  const autoPasskey = requirePasskey ? null : `auto-${moduleId ?? "global"}`;
 
   useEffect(() => {
     let active = true;
@@ -192,7 +194,7 @@ export function usePasskeySession(options: Options = {}): PasskeyState {
       }
       if (!active) return;
       setSession(current);
-      setStatus(current ? 'authenticated' : 'unauthenticated');
+      setStatus(current ? "authenticated" : "unauthenticated");
       if (!current) {
         setError(null);
       }
@@ -210,26 +212,29 @@ export function usePasskeySession(options: Options = {}): PasskeyState {
     };
   }, [moduleId, requirePasskey, autoPasskey]);
 
-  const signInHandler = useCallback(async (passkey: string) => {
-    setStatus('checking');
-    setError(null);
+  const signInHandler = useCallback(
+    async (passkey: string) => {
+      setStatus("checking");
+      setError(null);
 
-    const result = await signInWithPasskey(passkey, moduleId);
-    if (!result.session || result.error) {
-      setStatus('unauthenticated');
-      setSession(null);
-      setError(translateValidationError(result.error));
-      return;
-    }
+      const result = await signInWithPasskey(passkey, moduleId);
+      if (!result.session || result.error) {
+        setStatus("unauthenticated");
+        setSession(null);
+        setError(translateValidationError(result.error));
+        return;
+      }
 
-    setSession(result.session);
-    setStatus('authenticated');
-  }, [moduleId]);
+      setSession(result.session);
+      setStatus("authenticated");
+    },
+    [moduleId],
+  );
 
   const signOutHandler = useCallback(async () => {
     await signOut(moduleId);
     setSession(null);
-    setStatus(requirePasskey ? 'unauthenticated' : 'checking');
+    setStatus(requirePasskey ? "unauthenticated" : "checking");
     setError(null);
   }, [moduleId, requirePasskey]);
 

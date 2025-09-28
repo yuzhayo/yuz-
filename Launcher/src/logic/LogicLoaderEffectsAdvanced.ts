@@ -3,7 +3,14 @@ import type { Application } from "pixi.js";
 import type { BuiltLayer } from "./LogicTypes";
 import { isWebGLAvailable } from "./LogicCapability";
 
-type Aura = { sprite: Sprite; baseScale: number; strength: number; pulseMs?: number; color?: number; alpha: number };
+type Aura = {
+  sprite: Sprite;
+  baseScale: number;
+  strength: number;
+  pulseMs?: number;
+  color?: number;
+  alpha: number;
+};
 type Distort = { ampPx: number; speed: number; baseX: number; baseY: number };
 type Shock = { period: number; maxScale: number; fade: boolean; baseScale: number };
 
@@ -24,7 +31,8 @@ function canUseAdvanced(): boolean {
 }
 
 export function buildEffectsAdvanced(_app: Application, built: BuiltLayer[]) {
-  if (!canUseAdvanced()) return { items: [] as AdvItem[], tick: (_t: number) => {}, cleanup: () => {} };
+  if (!canUseAdvanced())
+    return { items: [] as AdvItem[], tick: (_t: number) => {}, cleanup: () => {} };
 
   const items: AdvItem[] = [];
 
@@ -53,7 +61,14 @@ export function buildEffectsAdvanced(_app: Application, built: BuiltLayer[]) {
           const index = parent.getChildIndex(b.sprite);
           parent.addChildAt(auraSprite, index);
         }
-        adv.auras.push({ sprite: auraSprite, baseScale: baseScale * (1 + scale), strength: 1, pulseMs, color, alpha });
+        adv.auras.push({
+          sprite: auraSprite,
+          baseScale: baseScale * (1 + scale),
+          strength: 1,
+          pulseMs,
+          color,
+          alpha,
+        });
       } else if ((e as any).type === "bloom") {
         const strength = typeof (e as any).strength === "number" ? (e as any).strength : 0.6;
         const auraSprite = new Sprite(b.sprite.texture);
@@ -65,7 +80,12 @@ export function buildEffectsAdvanced(_app: Application, built: BuiltLayer[]) {
           const index = parent.getChildIndex(b.sprite);
           parent.addChildAt(auraSprite, index);
         }
-        adv.auras.push({ sprite: auraSprite, baseScale: baseScale * (1 + 0.2 + strength * 0.2), strength, alpha: auraSprite.alpha });
+        adv.auras.push({
+          sprite: auraSprite,
+          baseScale: baseScale * (1 + 0.2 + strength * 0.2),
+          strength,
+          alpha: auraSprite.alpha,
+        });
       } else if ((e as any).type === "distort") {
         const ampPx = typeof (e as any).ampPx === "number" ? (e as any).ampPx : 2;
         const speed = typeof (e as any).speed === "number" ? (e as any).speed : 0.5;
@@ -92,7 +112,7 @@ export function buildEffectsAdvanced(_app: Application, built: BuiltLayer[]) {
         let s = a.baseScale;
         if (a.pulseMs) {
           const T = a.pulseMs / 1000;
-          if (T > 0) s = a.baseScale * (1 + 0.05 * Math.sin((2 * Math.PI / T) * elapsed));
+          if (T > 0) s = a.baseScale * (1 + 0.05 * Math.sin(((2 * Math.PI) / T) * elapsed));
         }
         a.sprite.scale.set(s, s);
       }
@@ -129,4 +149,3 @@ export function buildEffectsAdvanced(_app: Application, built: BuiltLayer[]) {
 
   return { items, tick, cleanup };
 }
-

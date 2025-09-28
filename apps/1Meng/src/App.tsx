@@ -1,12 +1,12 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { usePasskeySession } from '@shared/PasskeySession';
+import React, { useEffect, useMemo, useState } from "react";
+import { usePasskeySession } from "@shared/PasskeySession";
 import {
   insertModuleSubmission,
   listModuleSubmissions,
-  type ModuleSubmissionRecord
-} from '@shared/storage/localData';
+  type ModuleSubmissionRecord,
+} from "@shared/storage/localData";
 
-const MODULE_NAME = '1Meng';
+const MODULE_NAME = "1Meng";
 
 type SubmissionRow = ModuleSubmissionRecord;
 
@@ -17,13 +17,13 @@ type FormState = {
 };
 
 const initialForm: FormState = {
-  title: '',
-  amount: '',
-  note: ''
+  title: "",
+  amount: "",
+  note: "",
 };
 
 export default function App() {
-  const { status, session } = usePasskeySession({ moduleId: 'm1_meng' });
+  const { status, session } = usePasskeySession({ moduleId: "m1_meng" });
   const [form, setForm] = useState(initialForm);
   const [submissions, setSubmissions] = useState<SubmissionRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -31,7 +31,7 @@ export default function App() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated' && session) {
+    if (status === "authenticated" && session) {
       void loadSubmissions();
     }
   }, [status, session]);
@@ -43,8 +43,8 @@ export default function App() {
       const data = await listModuleSubmissions({ moduleName: MODULE_NAME });
       setSubmissions(data);
     } catch (err) {
-      console.error('[1Meng] Failed to load submissions', err);
-      setError('Tidak dapat memuat data lokal');
+      console.error("[1Meng] Failed to load submissions", err);
+      setError("Tidak dapat memuat data lokal");
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export default function App() {
     if (!session) return;
     const amountValue = Number(form.amount);
     if (Number.isNaN(amountValue) || amountValue <= 0) {
-      setError('Nominal harus angka positif');
+      setError("Nominal harus angka positif");
       return;
     }
     setLoading(true);
@@ -68,16 +68,16 @@ export default function App() {
         submission_data: {
           title: form.title,
           amount: amountValue,
-          note: form.note
+          note: form.note,
         },
-        submission_status: 'pending'
+        submission_status: "pending",
       });
       setForm(initialForm);
-      setMessage('Pengajuan berhasil disimpan');
+      setMessage("Pengajuan berhasil disimpan");
       await loadSubmissions();
     } catch (err) {
-      console.error('[1Meng] Failed to save submission', err);
-      setError('Gagal menyimpan catatan');
+      console.error("[1Meng] Failed to save submission", err);
+      setError("Gagal menyimpan catatan");
     } finally {
       setLoading(false);
     }
@@ -87,7 +87,7 @@ export default function App() {
     return submissions.reduce((sum, row) => sum + (Number(row.submission_data.amount) || 0), 0);
   }, [submissions]);
 
-  if (status === 'checking' || !session) {
+  if (status === "checking" || !session) {
     return (
       <div className="app-shell flex items-center justify-center">
         <p className="text-neutral-400">Menyiapkan modul...</p>
@@ -101,7 +101,9 @@ export default function App() {
         <header className="flex flex-col gap-1">
           <h1 className="text-3xl font-semibold">1MENG</h1>
           <p className="text-sm text-neutral-400">Catat pemasukan harian dengan cepat.</p>
-          <p className="text-xs text-neutral-500">Total tercatat: Rp {totalSpent.toLocaleString('id-ID')}</p>
+          <p className="text-xs text-neutral-500">
+            Total tercatat: Rp {totalSpent.toLocaleString("id-ID")}
+          </p>
         </header>
 
         <section className="rounded-xl border border-neutral-700 bg-neutral-900/60 p-6">
@@ -138,7 +140,7 @@ export default function App() {
                 className="rounded-md bg-emerald-500 px-4 py-2 text-sm font-semibold text-white hover:bg-emerald-400 disabled:opacity-60"
                 disabled={loading}
               >
-                {loading ? 'Menyimpan...' : 'Simpan'}
+                {loading ? "Menyimpan..." : "Simpan"}
               </button>
               {message && <span className="text-sm text-green-400">{message}</span>}
               {error && <span className="text-sm text-red-400">{error}</span>}
@@ -155,20 +157,28 @@ export default function App() {
           ) : (
             <ul className="mt-3 space-y-3 text-sm text-neutral-300">
               {submissions.map((item) => {
-                const title = typeof item.submission_data.title === 'string' ? item.submission_data.title : 'Tanpa Judul';
-                const amountValue = typeof item.submission_data.amount === 'number' ? item.submission_data.amount : Number(item.submission_data.amount) || 0;
-                const note = typeof item.submission_data.note === 'string' ? item.submission_data.note : null;
+                const title =
+                  typeof item.submission_data.title === "string"
+                    ? item.submission_data.title
+                    : "Tanpa Judul";
+                const amountValue =
+                  typeof item.submission_data.amount === "number"
+                    ? item.submission_data.amount
+                    : Number(item.submission_data.amount) || 0;
+                const note =
+                  typeof item.submission_data.note === "string" ? item.submission_data.note : null;
                 return (
-                  <li key={item.id} className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3">
+                  <li
+                    key={item.id}
+                    className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3"
+                  >
                     <div className="flex items-center justify-between text-xs text-neutral-500">
                       <span>{title}</span>
-                      <span>{new Date(item.created_at).toLocaleString('id-ID')}</span>
+                      <span>{new Date(item.created_at).toLocaleString("id-ID")}</span>
                     </div>
                     <div className="mt-2 flex items-center justify-between text-sm">
-                      <span>Rp {amountValue.toLocaleString('id-ID')}</span>
-                      {note && (
-                        <span className="text-neutral-400">{note}</span>
-                      )}
+                      <span>Rp {amountValue.toLocaleString("id-ID")}</span>
+                      {note && <span className="text-neutral-400">{note}</span>}
                     </div>
                   </li>
                 );
@@ -180,4 +190,3 @@ export default function App() {
     </div>
   );
 }
-

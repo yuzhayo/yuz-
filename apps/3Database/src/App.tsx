@@ -1,15 +1,15 @@
-﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { usePasskeySession } from '@shared/PasskeySession';
+﻿import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { usePasskeySession } from "@shared/PasskeySession";
 import {
   listModuleSubmissions,
   subscribeToLocalData,
-  type ModuleSubmissionRecord
-} from '@shared/storage/localData';
+  type ModuleSubmissionRecord,
+} from "@shared/storage/localData";
 
 type SubmissionRow = ModuleSubmissionRecord;
 
 export default function App() {
-  const { status } = usePasskeySession({ moduleId: 'm3_database' });
+  const { status } = usePasskeySession({ moduleId: "m3_database" });
   const [rows, setRows] = useState<SubmissionRow[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -23,7 +23,7 @@ export default function App() {
   }, []);
 
   const loadData = useCallback(async () => {
-    if (!mountedRef.current || status !== 'authenticated') return;
+    if (!mountedRef.current || status !== "authenticated") return;
     setLoading(true);
     setError(null);
     try {
@@ -32,9 +32,9 @@ export default function App() {
         setRows(data);
       }
     } catch (err) {
-      console.error('[3Database] Failed to load submissions', err);
+      console.error("[3Database] Failed to load submissions", err);
       if (mountedRef.current) {
-        setError('Tidak dapat memuat data lokal');
+        setError("Tidak dapat memuat data lokal");
       }
     } finally {
       if (mountedRef.current) {
@@ -44,7 +44,7 @@ export default function App() {
   }, [status]);
 
   useEffect(() => {
-    if (status !== 'authenticated') {
+    if (status !== "authenticated") {
       setRows([]);
       setError(null);
       setLoading(false);
@@ -69,7 +69,7 @@ export default function App() {
     return Array.from(counts.entries()).map(([module, total]) => ({ module, total }));
   }, [rows]);
 
-  if (status === 'checking') {
+  if (status === "checking") {
     return (
       <div className="app-shell flex items-center justify-center">
         <p className="text-neutral-400">Menyiapkan modul...</p>
@@ -94,7 +94,7 @@ export default function App() {
               className="rounded-md border border-neutral-600 px-3 py-1 text-sm hover:bg-neutral-800"
               disabled={loading}
             >
-              {loading ? 'Memuat...' : 'Refresh'}
+              {loading ? "Memuat..." : "Refresh"}
             </button>
           </div>
           {summary.length === 0 ? (
@@ -128,10 +128,13 @@ export default function App() {
           ) : (
             <ul className="mt-3 space-y-3 text-sm text-neutral-300">
               {rows.slice(0, 10).map((row) => (
-                <li key={row.id} className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3">
+                <li
+                  key={row.id}
+                  className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3"
+                >
                   <div className="flex items-center justify-between text-xs text-neutral-500">
                     <span>{row.module_name}</span>
-                    <span>{new Date(row.created_at).toLocaleString('id-ID')}</span>
+                    <span>{new Date(row.created_at).toLocaleString("id-ID")}</span>
                   </div>
                   <pre className="mt-2 overflow-x-auto rounded bg-neutral-950/70 p-3 text-xs">
                     {JSON.stringify(row.submission_data, null, 2)}

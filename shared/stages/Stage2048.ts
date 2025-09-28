@@ -1,16 +1,16 @@
 /**
  * Stage2048 - Standalone 2048×2048 Stage System
- * 
+ *
  * A complete stage system that handles Pixi.js integration, coordinate transformation,
  * and responsive scaling with a fixed 2048×2048 design canvas.
- * 
+ *
  * Usage:
  * ```ts
  * import { createStage2048, STAGE_WIDTH, STAGE_HEIGHT } from '@shared/stages/Stage2048'
- * 
+ *
  * // Simple usage
  * const stage = await createStage2048(rootElement)
- * 
+ *
  * // Advanced usage with options
  * const stage = await createStage2048(rootElement, {
  *   debug: true,
@@ -24,55 +24,55 @@ import type {
   PointerEvent as ReactPointerEvent,
   MouseEvent as ReactMouseEvent,
   TouchEvent as ReactTouchEvent,
-} from 'react';
+} from "react";
 
 // ===== CONSTANTS =====
 
 /** Fixed stage dimensions - 2048×2048 design canvas */
-export const STAGE_WIDTH = 2048
-export const STAGE_HEIGHT = 2048
+export const STAGE_WIDTH = 2048;
+export const STAGE_HEIGHT = 2048;
 
 // ===== TYPES AND INTERFACES =====
 
 export interface StageTransform {
-  scale: number
-  offsetX: number
-  offsetY: number
-  containerWidth: number
-  containerHeight: number
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+  containerWidth: number;
+  containerHeight: number;
 }
 
 export interface StageCoordinates {
-  stageX: number
-  stageY: number
+  stageX: number;
+  stageY: number;
 }
 
 export interface Stage2048Options {
   /** Enable debug overlay */
-  debug?: boolean
+  debug?: boolean;
   /** Device pixel ratio cap */
-  dprCap?: number
+  dprCap?: number;
   /** Background alpha for Pixi canvas */
-  backgroundAlpha?: number
+  backgroundAlpha?: number;
   /** Enable antialiasing */
-  antialias?: boolean
+  antialias?: boolean;
   /** Inject CSS styles automatically */
-  autoInjectCSS?: boolean
+  autoInjectCSS?: boolean;
 }
 
 export interface Stage2048Instance {
   /** Pixi Application instance */
-  app: any // Using any to avoid direct Pixi dependency
+  app: any; // Using any to avoid direct Pixi dependency
   /** Transform manager for coordinate conversion */
-  transformManager: StageTransformManager
+  transformManager: StageTransformManager;
   /** Get the overlay element for gesture handling */
-  getOverlay(): HTMLElement | null
+  getOverlay(): HTMLElement | null;
   /** Get current transform data */
-  getTransform(): StageTransform | null
+  getTransform(): StageTransform | null;
   /** Transform event coordinates to stage coordinates */
-  transformEventCoordinates(event: PointerEvent | MouseEvent | TouchEvent): StageCoordinates | null
+  transformEventCoordinates(event: PointerEvent | MouseEvent | TouchEvent): StageCoordinates | null;
   /** Clean up and dispose resources */
-  dispose(): void
+  dispose(): void;
 }
 
 // ===== CSS STYLES =====
@@ -185,7 +185,7 @@ export const STAGE_CSS = `
   -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
-`.trim()
+`.trim();
 
 // ===== UTILITY FUNCTIONS =====
 
@@ -193,26 +193,29 @@ export const STAGE_CSS = `
  * Calculate stage transform for cover behavior
  * Fills viewport while maintaining aspect ratio
  */
-export function calculateStageTransform(viewportWidth: number, viewportHeight: number): StageTransform {
+export function calculateStageTransform(
+  viewportWidth: number,
+  viewportHeight: number,
+): StageTransform {
   // Cover behavior: scale to fill viewport, crop what doesn't fit
-  const scaleX = viewportWidth / STAGE_WIDTH
-  const scaleY = viewportHeight / STAGE_HEIGHT
-  const scale = Math.max(scaleX, scaleY) // Use larger scale for cover
-  
-  const scaledWidth = STAGE_WIDTH * scale
-  const scaledHeight = STAGE_HEIGHT * scale
-  
+  const scaleX = viewportWidth / STAGE_WIDTH;
+  const scaleY = viewportHeight / STAGE_HEIGHT;
+  const scale = Math.max(scaleX, scaleY); // Use larger scale for cover
+
+  const scaledWidth = STAGE_WIDTH * scale;
+  const scaledHeight = STAGE_HEIGHT * scale;
+
   // Center the scaled stage
-  const offsetX = (viewportWidth - scaledWidth) / 2
-  const offsetY = (viewportHeight - scaledHeight) / 2
-  
+  const offsetX = (viewportWidth - scaledWidth) / 2;
+  const offsetY = (viewportHeight - scaledHeight) / 2;
+
   return {
     scale,
     offsetX,
     offsetY,
     containerWidth: scaledWidth,
-    containerHeight: scaledHeight
-  }
+    containerHeight: scaledHeight,
+  };
 }
 
 /**
@@ -222,20 +225,20 @@ export function calculateStageTransform(viewportWidth: number, viewportHeight: n
 export function transformCoordinatesToStage(
   clientX: number,
   clientY: number,
-  transform: StageTransform
+  transform: StageTransform,
 ): StageCoordinates {
   // Convert from viewport coordinates to stage coordinates
-  const stageX = (clientX - transform.offsetX) / transform.scale
-  const stageY = (clientY - transform.offsetY) / transform.scale
-  
-  return { stageX, stageY }
+  const stageX = (clientX - transform.offsetX) / transform.scale;
+  const stageY = (clientY - transform.offsetY) / transform.scale;
+
+  return { stageX, stageY };
 }
 
 /**
  * Check if coordinates are within the stage bounds
  */
 export function isWithinStage(stageX: number, stageY: number): boolean {
-  return stageX >= 0 && stageX <= STAGE_WIDTH && stageY >= 0 && stageY <= STAGE_HEIGHT
+  return stageX >= 0 && stageX <= STAGE_WIDTH && stageY >= 0 && stageY <= STAGE_HEIGHT;
 }
 
 /**
@@ -243,18 +246,18 @@ export function isWithinStage(stageX: number, stageY: number): boolean {
  * Only injects once, safe to call multiple times
  */
 export function ensureStageStyles(): void {
-  const styleId = 'stage2048-styles'
-  
+  const styleId = "stage2048-styles";
+
   // Check if styles are already injected
   if (document.getElementById(styleId)) {
-    return
+    return;
   }
-  
+
   // Create and inject style element
-  const styleElement = document.createElement('style')
-  styleElement.id = styleId
-  styleElement.textContent = STAGE_CSS
-  document.head.appendChild(styleElement)
+  const styleElement = document.createElement("style");
+  styleElement.id = styleId;
+  styleElement.textContent = STAGE_CSS;
+  document.head.appendChild(styleElement);
 }
 
 // ===== STAGE TRANSFORM MANAGER =====
@@ -264,149 +267,151 @@ export function ensureStageStyles(): void {
  * Handles DOM manipulation and coordinate transformation
  */
 export class StageTransformManager {
-  private container: HTMLElement | null = null
-  private canvas: HTMLCanvasElement | null = null
-  private overlay: HTMLElement | null = null
-  private transform: StageTransform | null = null
-  private resizeObserver: ResizeObserver | null = null
-  private debugElement: HTMLElement | null = null
-  
+  private container: HTMLElement | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+  private overlay: HTMLElement | null = null;
+  private transform: StageTransform | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private debugElement: HTMLElement | null = null;
+
   constructor(private debug = false) {
     // Initialize resize observer
-    this.resizeObserver = new ResizeObserver(entries => {
+    this.resizeObserver = new ResizeObserver((entries) => {
       for (const entry of entries) {
         if (entry.target === document.body || entry.target === document.documentElement) {
-          this.updateTransform()
+          this.updateTransform();
         }
       }
-    })
+    });
   }
 
   /**
    * Initialize the stage transform system
    */
   initialize(container: HTMLElement, canvas: HTMLCanvasElement, overlay?: HTMLElement) {
-    this.container = container
-    this.canvas = canvas
-    this.overlay = overlay || null
-    
+    this.container = container;
+    this.canvas = canvas;
+    this.overlay = overlay || null;
+
     // Apply CSS classes
-    container.classList.add('stage-cover-container')
-    canvas.classList.add('stage-cover-canvas')
+    container.classList.add("stage-cover-container");
+    canvas.classList.add("stage-cover-canvas");
     if (overlay) {
-      overlay.classList.add('stage-cover-overlay')
+      overlay.classList.add("stage-cover-overlay");
     }
-    
+
     // Start observing resize events
-    this.resizeObserver?.observe(document.body)
-    
+    this.resizeObserver?.observe(document.body);
+
     // Setup debug if enabled
     if (this.debug) {
-      this.setupDebug()
+      this.setupDebug();
     }
-    
+
     // Initial transform
-    this.updateTransform()
-    
-    return this
+    this.updateTransform();
+
+    return this;
   }
 
   /**
    * Update transform based on current viewport size
    */
   updateTransform() {
-    if (!this.container || !this.canvas) return
-    
-    const viewportWidth = window.innerWidth
-    const viewportHeight = window.innerHeight
-    
-    this.transform = calculateStageTransform(viewportWidth, viewportHeight)
-    
+    if (!this.container || !this.canvas) return;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    this.transform = calculateStageTransform(viewportWidth, viewportHeight);
+
     // Apply CSS transforms
-    this.canvas.style.transform = `scale(${this.transform.scale})`
-    this.container.style.width = `${this.transform.containerWidth}px`
-    this.container.style.height = `${this.transform.containerHeight}px`
-    
+    this.canvas.style.transform = `scale(${this.transform.scale})`;
+    this.container.style.width = `${this.transform.containerWidth}px`;
+    this.container.style.height = `${this.transform.containerHeight}px`;
+
     // Update debug info
     if (this.debug && this.debugElement) {
-      this.updateDebugInfo()
+      this.updateDebugInfo();
     }
   }
 
   /**
    * Transform event coordinates to stage coordinates
    */
-  transformEventCoordinates(event: PointerEvent | MouseEvent | TouchEvent): StageCoordinates | null {
-    if (!this.transform) return null
-    
-    let clientX: number, clientY: number
-    
-    if ('touches' in event && event.touches.length > 0) {
+  transformEventCoordinates(
+    event: PointerEvent | MouseEvent | TouchEvent,
+  ): StageCoordinates | null {
+    if (!this.transform) return null;
+
+    let clientX: number, clientY: number;
+
+    if ("touches" in event && event.touches.length > 0) {
       // Touch event
-      const firstTouch = event.touches.item(0)
-      if (!firstTouch) return null
-      clientX = firstTouch.clientX
-      clientY = firstTouch.clientY
-    } else if ('clientX' in event) {
+      const firstTouch = event.touches.item(0);
+      if (!firstTouch) return null;
+      clientX = firstTouch.clientX;
+      clientY = firstTouch.clientY;
+    } else if ("clientX" in event) {
       // Mouse or pointer event
-      clientX = event.clientX
-      clientY = event.clientY
+      clientX = event.clientX;
+      clientY = event.clientY;
     } else {
-      return null
+      return null;
     }
-    
-    return transformCoordinatesToStage(clientX, clientY, this.transform)
+
+    return transformCoordinatesToStage(clientX, clientY, this.transform);
   }
 
   /**
    * Get current transform data
    */
   getTransform(): StageTransform | null {
-    return this.transform
+    return this.transform;
   }
 
   /**
    * Setup debug overlay
    */
   private setupDebug() {
-    this.debugElement = document.createElement('div')
-    this.debugElement.classList.add('stage-cover-debug')
-    document.body.appendChild(this.debugElement)
-    this.updateDebugInfo()
+    this.debugElement = document.createElement("div");
+    this.debugElement.classList.add("stage-cover-debug");
+    document.body.appendChild(this.debugElement);
+    this.updateDebugInfo();
   }
 
   /**
    * Update debug information
    */
   private updateDebugInfo() {
-    if (!this.debugElement || !this.transform) return
-    
-    const vw = window.innerWidth
-    const vh = window.innerHeight
-    const aspectRatio = (vw / vh).toFixed(2)
-    
+    if (!this.debugElement || !this.transform) return;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const aspectRatio = (vw / vh).toFixed(2);
+
     this.debugElement.innerHTML = `
       Stage: ${STAGE_WIDTH}×${STAGE_HEIGHT}<br>
       Viewport: ${vw}×${vh} (${aspectRatio}:1)<br>
       Scale: ${this.transform.scale.toFixed(3)}<br>
       Container: ${Math.round(this.transform.containerWidth)}×${Math.round(this.transform.containerHeight)}<br>
       Offset: ${Math.round(this.transform.offsetX)}, ${Math.round(this.transform.offsetY)}
-    `.trim()
+    `.trim();
   }
 
   /**
    * Clean up resources
    */
   dispose() {
-    this.resizeObserver?.disconnect()
+    this.resizeObserver?.disconnect();
     if (this.debugElement) {
-      document.body.removeChild(this.debugElement)
+      document.body.removeChild(this.debugElement);
     }
-    this.container = null
-    this.canvas = null
-    this.overlay = null
-    this.transform = null
-    this.debugElement = null
+    this.container = null;
+    this.canvas = null;
+    this.overlay = null;
+    this.transform = null;
+    this.debugElement = null;
   }
 }
 
@@ -421,23 +426,23 @@ export function createCoordinateTransformer(manager: StageTransformManager) {
      * Transform pointer event coordinates to stage coordinates
      */
     transformPointerEvent: (event: ReactPointerEvent<HTMLElement>): StageCoordinates | null => {
-      return manager.transformEventCoordinates(event.nativeEvent)
+      return manager.transformEventCoordinates(event.nativeEvent);
     },
-    
+
     /**
      * Transform mouse event coordinates to stage coordinates
      */
     transformMouseEvent: (event: ReactMouseEvent<HTMLElement>): StageCoordinates | null => {
-      return manager.transformEventCoordinates(event.nativeEvent)
+      return manager.transformEventCoordinates(event.nativeEvent);
     },
-    
+
     /**
      * Transform touch event coordinates to stage coordinates
      */
     transformTouchEvent: (event: ReactTouchEvent<HTMLElement>): StageCoordinates | null => {
-      return manager.transformEventCoordinates(event.nativeEvent)
-    }
-  }
+      return manager.transformEventCoordinates(event.nativeEvent);
+    },
+  };
 }
 
 /**
@@ -449,7 +454,7 @@ export function useStageCoordinates(transformManager: StageTransformManager) {
      * Transform React pointer event to stage coordinates
      */
     transformPointerEvent: (event: ReactPointerEvent<HTMLElement>) => {
-      return transformManager.transformEventCoordinates(event.nativeEvent)
+      return transformManager.transformEventCoordinates(event.nativeEvent);
     },
 
     /**
@@ -461,23 +466,23 @@ export function useStageCoordinates(transformManager: StageTransformManager) {
      * Check if stage coordinates are within bounds
      */
     isWithinStage: (stageX: number, stageY: number) => {
-      return stageX >= 0 && stageX <= STAGE_WIDTH && stageY >= 0 && stageY <= STAGE_HEIGHT
-    }
-  }
+      return stageX >= 0 && stageX <= STAGE_WIDTH && stageY >= 0 && stageY <= STAGE_HEIGHT;
+    },
+  };
 }
 
 // ===== FACTORY FUNCTIONS =====
 
 /**
  * Create a complete Stage2048 system with Pixi.js integration
- * 
+ *
  * This is the main factory function that sets up everything you need:
  * - CSS injection
  * - Pixi Application creation
  * - DOM structure setup
  * - Transform management
  * - Coordinate transformation
- * 
+ *
  * @param rootElement - The root element to mount the stage
  * @param options - Configuration options
  * @param PixiApplication - Pixi Application constructor (injected to avoid direct dependency)
@@ -486,110 +491,109 @@ export function useStageCoordinates(transformManager: StageTransformManager) {
 export async function createStage2048(
   rootElement: HTMLElement,
   options: Stage2048Options = {},
-  PixiApplication?: any
+  PixiApplication?: any,
 ): Promise<Stage2048Instance> {
-  
   // Inject CSS if enabled (default: true)
   if (options.autoInjectCSS !== false) {
-    ensureStageStyles()
+    ensureStageStyles();
   }
-  
+
   // Ensure we have a Pixi Application constructor
   if (!PixiApplication) {
     try {
       // Try to import Pixi.js dynamically
-      const pixi = await import('pixi.js')
-      PixiApplication = pixi.Application
-    } catch (_error) {
-      throw new Error('Pixi.js Application not available. Please provide PixiApplication parameter or install pixi.js')
+      const pixi = await import("pixi.js");
+      PixiApplication = pixi.Application;
+    } catch {
+      throw new Error(
+        "Pixi.js Application not available. Please provide PixiApplication parameter or install pixi.js",
+      );
     }
   }
-  
+
   // Create transform manager
-  const transformManager = new StageTransformManager(options.debug)
-  
+  const transformManager = new StageTransformManager(options.debug);
+
   // Create Pixi application with FIXED dimensions
-  const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1)
-  
+  const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
+
   const app = new PixiApplication({
     width: STAGE_WIDTH,
     height: STAGE_HEIGHT,
     backgroundAlpha: options.backgroundAlpha ?? 0,
     antialias: options.antialias ?? true,
     autoDensity: true,
-    resolution: dpr
-  })
+    resolution: dpr,
+  });
 
   // Create container and overlay structure
-  const container = document.createElement('div')
-  const overlay = document.createElement('div')
-  
+  const container = document.createElement("div");
+  const overlay = document.createElement("div");
+
   // Setup DOM structure
-  rootElement.classList.add('stage-cover-root')
-  rootElement.appendChild(container)
-  container.appendChild(app.view as HTMLCanvasElement)
-  container.appendChild(overlay)
-  
+  rootElement.classList.add("stage-cover-root");
+  rootElement.appendChild(container);
+  container.appendChild(app.view as HTMLCanvasElement);
+  container.appendChild(overlay);
+
   // Initialize transform system
-  transformManager.initialize(
-    container,
-    app.view as HTMLCanvasElement,
-    overlay
-  )
-  
+  transformManager.initialize(container, app.view as HTMLCanvasElement, overlay);
+
   // Return complete Stage2048Instance
   return {
     app,
     transformManager,
-    
+
     getOverlay(): HTMLElement | null {
-      return container?.querySelector('.stage-cover-overlay') as HTMLElement || null
+      return (container?.querySelector(".stage-cover-overlay") as HTMLElement) || null;
     },
-    
+
     getTransform(): StageTransform | null {
-      return transformManager.getTransform()
+      return transformManager.getTransform();
     },
-    
-    transformEventCoordinates(event: PointerEvent | MouseEvent | TouchEvent): StageCoordinates | null {
-      return transformManager.transformEventCoordinates(event)
+
+    transformEventCoordinates(
+      event: PointerEvent | MouseEvent | TouchEvent,
+    ): StageCoordinates | null {
+      return transformManager.transformEventCoordinates(event);
     },
-    
+
     dispose() {
       if (app) {
         try {
           // Remove canvas from DOM
-          const canvas = app.view as HTMLCanvasElement
+          const canvas = app.view as HTMLCanvasElement;
           if (container && container.contains(canvas)) {
-            container.removeChild(canvas)
+            container.removeChild(canvas);
           }
         } catch (e) {
-          console.warn('Failed to remove canvas from DOM:', e)
+          console.warn("Failed to remove canvas from DOM:", e);
         }
 
         // Destroy Pixi app
         app.destroy(true, {
           children: true,
           texture: true,
-          baseTexture: true
-        })
+          baseTexture: true,
+        });
       }
 
       // Clean up container
       if (container?.parentElement) {
-        container.parentElement.removeChild(container)
+        container.parentElement.removeChild(container);
       }
 
       // Dispose transform manager
-      transformManager.dispose()
-    }
-  }
+      transformManager.dispose();
+    },
+  };
 }
 
 /**
  * Create just the transform manager (for custom Pixi setups)
  */
 export function createTransformManager(debug = false): StageTransformManager {
-  return new StageTransformManager(debug)
+  return new StageTransformManager(debug);
 }
 
 /**
@@ -597,17 +601,17 @@ export function createTransformManager(debug = false): StageTransformManager {
  */
 export function createPixiApplication(options: Stage2048Options = {}, PixiApplication?: any) {
   if (!PixiApplication) {
-    throw new Error('PixiApplication constructor required')
+    throw new Error("PixiApplication constructor required");
   }
-  
-  const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1)
-  
+
+  const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
+
   return new PixiApplication({
     width: STAGE_WIDTH,
     height: STAGE_HEIGHT,
     backgroundAlpha: options.backgroundAlpha ?? 0,
     antialias: options.antialias ?? true,
     autoDensity: true,
-    resolution: dpr
-  })
+    resolution: dpr,
+  });
 }

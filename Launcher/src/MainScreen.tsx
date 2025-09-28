@@ -1,31 +1,31 @@
-import React from 'react'
-import { MainScreenBtnPanel } from './MainScreenBtn'
-import { useMainScreenBtnGesture } from './MainScreenBtnGesture'
-import MainScreenRendererBadge from './MainScreenRendererBadge'
-import MainScreenUpdater from './MainScreenUpdater'
-import MainScreenApiTester from './MainScreenApiTester'
-import LogicStage from './logic/LogicStage'
-import LogicStageDom from './logic/LogicStageDom'
-import { detectRenderer, type RendererMode } from './logic/LogicCapability'
+import React from "react";
+import { MainScreenBtnPanel } from "./MainScreenBtn";
+import { useMainScreenBtnGesture } from "./MainScreenBtnGesture";
+import MainScreenRendererBadge from "./MainScreenRendererBadge";
+import MainScreenUpdater from "./MainScreenUpdater";
+import MainScreenApiTester from "./MainScreenApiTester";
+import LogicStage from "./logic/LogicStage";
+import LogicStageDom from "./logic/LogicStageDom";
+import { detectRenderer, type RendererMode } from "./logic/LogicCapability";
 
 export type MainScreenProps = {
-  rendererMode?: RendererMode // 'auto' | 'pixi' | 'dom'
-}
+  rendererMode?: RendererMode; // 'auto' | 'pixi' | 'dom'
+};
 
 /**
  * Layar utama launcher yang menampilkan navigasi dock.
  * Logic renderer kompleks dihapus untuk sementara.
  */
 export default function MainScreen(props: MainScreenProps) {
-  const mode = props.rendererMode ?? 'auto'
-  const chosen = detectRenderer(mode)
-  const gesture = useMainScreenBtnGesture()
-  const label = chosen === 'pixi' ? 'Renderer: Pixi' : 'Renderer: DOM'
+  const mode = props.rendererMode ?? "auto";
+  const chosen = detectRenderer(mode);
+  const gesture = useMainScreenBtnGesture();
+  const label = chosen === "pixi" ? "Renderer: Pixi" : "Renderer: DOM";
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Renderer canvas behind UI */}
       <div className="absolute inset-0">
-        {chosen === 'pixi' ? <LogicStage /> : <LogicStageDom />}
+        {chosen === "pixi" ? <LogicStage /> : <LogicStageDom />}
       </div>
       {/* Invisible gesture target */}
       <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto" />
@@ -33,9 +33,7 @@ export default function MainScreen(props: MainScreenProps) {
       <div className="flex items-center justify-center h-full">
         <div className="text-center space-y-4">
           <h1 className="text-4xl font-bold text-white">'''</h1>
-          <p className="text-slate-300">
-            Hold tap anywhere to access modules
-          </p>
+          <p className="text-slate-300">Hold tap anywhere to access modules</p>
         </div>
       </div>
 
@@ -43,7 +41,7 @@ export default function MainScreen(props: MainScreenProps) {
       <MainScreenBtnPanel
         open={gesture.open}
         onToggle={gesture.toggle}
-        effect={{ kind: 'fade' }}
+        effect={{ kind: "fade" }}
         title="Modules"
         target="_self"
       />
@@ -52,5 +50,5 @@ export default function MainScreen(props: MainScreenProps) {
       <MainScreenApiTester visible={gesture.open} />
       <MainScreenUpdater visible={gesture.open} />
     </div>
-  )
+  );
 }

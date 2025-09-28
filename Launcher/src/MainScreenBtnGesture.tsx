@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react";
 
 /**
  * LauncherBtnGesture
@@ -20,41 +20,41 @@ import React from 'react'
 
 export type MainScreenBtnGestureOptions = {
   /** Durasi tahan minimal (ms) untuk terdeteksi long-press. Default 450 ms. */
-  holdMs?: number
+  holdMs?: number;
   /** Ambang toleransi gerakan saat menahan (px). Default 8 px. */
-  moveTolerancePx?: number
-}
+  moveTolerancePx?: number;
+};
 
 export type MainScreenBtnGesture = {
   /** Status panel tombol (true: tampil). */
-  open: boolean
+  open: boolean;
   /** Ganti status secara manual (opsional). */
-  setOpen: (v: boolean) => void
+  setOpen: (v: boolean) => void;
   /** Toggle manual (opsional). */
-  toggle: () => void
+  toggle: () => void;
   /**
    * Bind props gestur ke elemen target (mis. overlay full screen).
    * Contoh: <div {...bindTargetProps()} className="absolute inset-0" />
    */
-  bindTargetProps: () => React.HTMLAttributes<HTMLElement>
-}
+  bindTargetProps: () => React.HTMLAttributes<HTMLElement>;
+};
 
 type PressState = {
-  active: boolean
-  id: number | null
-  startX: number
-  startY: number
-  startedAt: number
-  timer: number | null
-  consumed: boolean // true jika sudah toggle pada siklus ini
-}
+  active: boolean;
+  id: number | null;
+  startX: number;
+  startY: number;
+  startedAt: number;
+  timer: number | null;
+  consumed: boolean; // true jika sudah toggle pada siklus ini
+};
 
 export function useMainScreenBtnGesture(opts?: MainScreenBtnGestureOptions): MainScreenBtnGesture {
-  const holdMs = Math.max(120, Math.floor(opts?.holdMs ?? 450))
-  const tol = Math.max(2, Math.floor(opts?.moveTolerancePx ?? 8))
+  const holdMs = Math.max(120, Math.floor(opts?.holdMs ?? 450));
+  const tol = Math.max(2, Math.floor(opts?.moveTolerancePx ?? 8));
 
-  const [open, setOpen] = React.useState(false)
-  const toggle = React.useCallback(() => setOpen(v => !v), [])
+  const [open, setOpen] = React.useState(false);
+  const toggle = React.useCallback(() => setOpen((v) => !v), []);
 
   const pressRef = React.useRef<PressState>({
     active: false,
@@ -63,80 +63,90 @@ export function useMainScreenBtnGesture(opts?: MainScreenBtnGestureOptions): Mai
     startY: 0,
     startedAt: 0,
     timer: null,
-    consumed: false
-  })
+    consumed: false,
+  });
 
   const clearTimer = React.useCallback(() => {
-    const p = pressRef.current
+    const p = pressRef.current;
     if (p.timer !== null) {
-      window.clearTimeout(p.timer)
-      p.timer = null
+      window.clearTimeout(p.timer);
+      p.timer = null;
     }
-  }, [])
+  }, []);
 
-  const onPointerDown = React.useCallback((e: React.PointerEvent<HTMLElement>) => {
-    if (!e.isPrimary) return
-    // Pastikan target dapat menerima pointer event
-    ;(e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId)
+  const onPointerDown = React.useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      if (!e.isPrimary) return; // Pastikan target dapat menerima pointer event
+      (e.currentTarget as HTMLElement).setPointerCapture?.(e.pointerId);
 
-    const p = pressRef.current
-    p.active = true
-    p.id = e.pointerId
-    p.startX = e.clientX
-    p.startY = e.clientY
-    p.startedAt = performance.now()
-    p.consumed = false
+      const p = pressRef.current;
+      p.active = true;
+      p.id = e.pointerId;
+      p.startX = e.clientX;
+      p.startY = e.clientY;
+      p.startedAt = performance.now();
+      p.consumed = false;
 
-    clearTimer()
-    p.timer = window.setTimeout(() => {
-      // Bila masih aktif dan belum digerakkan jauh, toggle
-      if (p.active && !p.consumed) {
-        p.consumed = true
-        toggle()
+      clearTimer();
+      p.timer = window.setTimeout(() => {
+        // Bila masih aktif dan belum digerakkan jauh, toggle
+        if (p.active && !p.consumed) {
+          p.consumed = true;
+          toggle();
+        }
+      }, holdMs);
+    },
+    [clearTimer, holdMs, toggle],
+  );
+
+  const onPointerMove = React.useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      const p = pressRef.current;
+      if (!p.active || p.id !== e.pointerId) return;
+      const dx = e.clientX - p.startX;
+      const dy = e.clientY - p.startY;
+      if (dx * dx + dy * dy > tol * tol) {
+        // Terlalu banyak bergerak saat menahan → batalkan hold
+        p.active = false;
+        p.id = null;
+        p.consumed = false;
+        clearTimer();
       }
-    }, holdMs)
-  }, [clearTimer, holdMs, toggle])
+    },
+    [clearTimer, tol],
+  );
 
-  const onPointerMove = React.useCallback((e: React.PointerEvent<HTMLElement>) => {
-    const p = pressRef.current
-    if (!p.active || p.id !== e.pointerId) return
-    const dx = e.clientX - p.startX
-    const dy = e.clientY - p.startY
-    if ((dx * dx + dy * dy) > (tol * tol)) {
-      // Terlalu banyak bergerak saat menahan → batalkan hold
-      p.active = false
-      p.id = null
-      p.consumed = false
-      clearTimer()
-    }
-  }, [clearTimer, tol])
-
-  const endPress = React.useCallback((e: React.PointerEvent<HTMLElement>) => {
-    const p = pressRef.current
-    if (!p.active || (p.id !== null && p.id !== e.pointerId)) return
-    p.active = false
-    p.id = null
-    // Jika timer belum menembak (belum long-press), tidak melakukan apa-apa (bukan toggle).
-    clearTimer()
-    // Lepas capture jika sempat dipasang
-    try { (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId) } catch {}
-  }, [clearTimer])
+  const endPress = React.useCallback(
+    (e: React.PointerEvent<HTMLElement>) => {
+      const p = pressRef.current;
+      if (!p.active || (p.id !== null && p.id !== e.pointerId)) return;
+      p.active = false;
+      p.id = null;
+      // Jika timer belum menembak (belum long-press), tidak melakukan apa-apa (bukan toggle).
+      clearTimer();
+      // Lepas capture jika sempat dipasang
+      try {
+        (e.currentTarget as HTMLElement).releasePointerCapture?.(e.pointerId);
+      } catch {}
+    },
+    [clearTimer],
+  );
 
   const bindTargetProps = React.useCallback((): React.HTMLAttributes<HTMLElement> => {
     return {
       onPointerDown,
       onPointerMove,
       onPointerUp: endPress,
-      onPointerCancel: endPress
-    }
-  }, [onPointerDown, onPointerMove, endPress])
+      onPointerCancel: endPress,
+    };
+  }, [onPointerDown, onPointerMove, endPress]);
 
   // Bersih-bersih saat unmount
   React.useEffect(() => {
-    return () => clearTimer()
-  }, [clearTimer])
+    return () => clearTimer();
+  }, [clearTimer]);
 
-  return { open, setOpen, toggle, bindTargetProps }
+  return { open, setOpen, toggle, bindTargetProps };
 }
 
 /* ================================================
@@ -145,27 +155,29 @@ export function useMainScreenBtnGesture(opts?: MainScreenBtnGestureOptions): Mai
  * - Kamu bisa styling overlay sendiri via className.
  * ================================================ */
 export type MainScreenBtnGestureAreaProps = {
-  className?: string
-  style?: React.CSSProperties
-  children?: React.ReactNode
-  options?: MainScreenBtnGestureOptions
-  onOpenChange?: (open: boolean) => void
-}
+  className?: string;
+  style?: React.CSSProperties;
+  children?: React.ReactNode;
+  options?: MainScreenBtnGestureOptions;
+  onOpenChange?: (open: boolean) => void;
+};
 
 export function MainScreenBtnGestureArea(props: MainScreenBtnGestureAreaProps) {
-  const g = useMainScreenBtnGesture(props.options)
-  React.useEffect(() => { props.onOpenChange?.(g.open) }, [g.open, props])
+  const g = useMainScreenBtnGesture(props.options);
+  React.useEffect(() => {
+    props.onOpenChange?.(g.open);
+  }, [g.open, props]);
 
   return (
     <div
       {...g.bindTargetProps()}
-      className={props.className ?? 'absolute inset-0 pointer-events-auto'}
+      className={props.className ?? "absolute inset-0 pointer-events-auto"}
       style={props.style}
     >
-      {typeof props.children === 'function'
-        // @ts-expect-error: expose open via function child kalau mau
-        ? props.children({ open: g.open, toggle: g.toggle })
+      {typeof props.children === "function"
+        ? // @ts-expect-error: expose open via function child kalau mau
+          props.children({ open: g.open, toggle: g.toggle })
         : props.children}
     </div>
-  )
+  );
 }

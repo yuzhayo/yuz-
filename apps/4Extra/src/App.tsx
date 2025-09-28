@@ -1,13 +1,13 @@
-import React, { useEffect, useState } from 'react';
-import { usePasskeySession } from '@shared/PasskeySession';
+import React, { useEffect, useState } from "react";
+import { usePasskeySession } from "@shared/PasskeySession";
 import {
   deleteModuleSubmission,
   insertModuleSubmission,
   listModuleSubmissions,
-  type ModuleSubmissionRecord
-} from '@shared/storage/localData';
+  type ModuleSubmissionRecord,
+} from "@shared/storage/localData";
 
-const MODULE_NAME = '4Extra';
+const MODULE_NAME = "4Extra";
 
 type ExtraItem = ModuleSubmissionRecord;
 
@@ -17,12 +17,12 @@ type FormState = {
 };
 
 const defaultForm: FormState = {
-  title: '',
-  description: ''
+  title: "",
+  description: "",
 };
 
 export default function App() {
-  const { status, session } = usePasskeySession({ moduleId: 'm4_extra' });
+  const { status, session } = usePasskeySession({ moduleId: "m4_extra" });
   const [items, setItems] = useState<ExtraItem[]>([]);
   const [form, setForm] = useState(defaultForm);
   const [loading, setLoading] = useState(false);
@@ -30,7 +30,7 @@ export default function App() {
   const [message, setMessage] = useState<string | null>(null);
 
   useEffect(() => {
-    if (status === 'authenticated' && session) {
+    if (status === "authenticated" && session) {
       void loadItems();
     }
   }, [status, session]);
@@ -42,8 +42,8 @@ export default function App() {
       const data = await listModuleSubmissions({ moduleName: MODULE_NAME });
       setItems(data);
     } catch (err) {
-      console.error('[4Extra] Failed to load submissions', err);
-      setError('Tidak dapat memuat data lokal');
+      console.error("[4Extra] Failed to load submissions", err);
+      setError("Tidak dapat memuat data lokal");
     } finally {
       setLoading(false);
     }
@@ -53,7 +53,7 @@ export default function App() {
     event.preventDefault();
     if (!session) return;
     if (!form.title.trim()) {
-      setError('Judul tidak boleh kosong');
+      setError("Judul tidak boleh kosong");
       return;
     }
     setLoading(true);
@@ -65,15 +65,15 @@ export default function App() {
         module_name: MODULE_NAME,
         submission_data: {
           title: form.title,
-          description: form.description
-        }
+          description: form.description,
+        },
       });
-      setMessage('Catatan tersimpan');
+      setMessage("Catatan tersimpan");
       setForm(defaultForm);
       await loadItems();
     } catch (err) {
-      console.error('[4Extra] Failed to save submission', err);
-      setError('Gagal menyimpan catatan');
+      console.error("[4Extra] Failed to save submission", err);
+      setError("Gagal menyimpan catatan");
     } finally {
       setLoading(false);
     }
@@ -86,14 +86,14 @@ export default function App() {
       await deleteModuleSubmission(id);
       await loadItems();
     } catch (err) {
-      console.error('[4Extra] Failed to delete submission', err);
-      setError('Gagal menghapus catatan');
+      console.error("[4Extra] Failed to delete submission", err);
+      setError("Gagal menghapus catatan");
     } finally {
       setLoading(false);
     }
   }
 
-  if (status === 'checking' || !session) {
+  if (status === "checking" || !session) {
     return (
       <div className="app-shell flex items-center justify-center">
         <p className="text-neutral-400">Menyiapkan modul...</p>
@@ -127,7 +127,9 @@ export default function App() {
                 rows={3}
                 className="rounded-md border border-neutral-600 bg-neutral-800 px-3 py-2"
                 value={form.description}
-                onChange={(event) => setForm((prev) => ({ ...prev, description: event.target.value }))}
+                onChange={(event) =>
+                  setForm((prev) => ({ ...prev, description: event.target.value }))
+                }
               />
             </label>
             <div className="flex items-center gap-3">
@@ -136,7 +138,7 @@ export default function App() {
                 className="rounded-md bg-orange-500 px-4 py-2 text-sm font-semibold text-white hover:bg-orange-400 disabled:opacity-60"
                 disabled={loading}
               >
-                {loading ? 'Menyimpan...' : 'Simpan'}
+                {loading ? "Menyimpan..." : "Simpan"}
               </button>
               {message && <span className="text-sm text-green-400">{message}</span>}
               {error && <span className="text-sm text-red-400">{error}</span>}
@@ -153,12 +155,21 @@ export default function App() {
           ) : (
             <ul className="mt-3 space-y-3 text-sm text-neutral-300">
               {items.map((item) => {
-                const title = typeof item.submission_data.title === 'string' ? item.submission_data.title : 'Tanpa Judul';
-                const description = typeof item.submission_data.description === 'string' ? item.submission_data.description : null;
+                const title =
+                  typeof item.submission_data.title === "string"
+                    ? item.submission_data.title
+                    : "Tanpa Judul";
+                const description =
+                  typeof item.submission_data.description === "string"
+                    ? item.submission_data.description
+                    : null;
                 return (
-                  <li key={item.id} className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3">
+                  <li
+                    key={item.id}
+                    className="rounded-md border border-neutral-700 bg-neutral-900/60 p-3"
+                  >
                     <div className="flex items-center justify-between text-xs text-neutral-500">
-                      <span>{new Date(item.created_at).toLocaleString('id-ID')}</span>
+                      <span>{new Date(item.created_at).toLocaleString("id-ID")}</span>
                       <button
                         onClick={() => removeItem(item.id)}
                         className="text-xs text-red-300 hover:text-red-200"
@@ -168,9 +179,7 @@ export default function App() {
                       </button>
                     </div>
                     <h3 className="mt-1 text-sm font-semibold text-neutral-100">{title}</h3>
-                    {description && (
-                      <p className="mt-1 text-sm text-neutral-400">{description}</p>
-                    )}
+                    {description && <p className="mt-1 text-sm text-neutral-400">{description}</p>}
                   </li>
                 );
               })}
@@ -182,4 +191,3 @@ export default function App() {
     </div>
   );
 }
-
