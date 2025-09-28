@@ -517,46 +517,30 @@ export async function createStage2048(
   // Create Pixi application with FIXED dimensions
   const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
 
-  // Try to create Pixi application with fallback renderer support
+  // Create Pixi application with forced renderer type to avoid auto-detection
   let app: any;
+  
+  // Try Canvas renderer to avoid WebGL auto-detection issues
   try {
-    // Try WebGL first
     app = new PixiApplication({
       width: STAGE_WIDTH,
       height: STAGE_HEIGHT,
-      backgroundAlpha: options.backgroundAlpha ?? 0,
-      antialias: options.antialias ?? true,
-      autoDensity: true,
-      resolution: dpr,
-      preference: "webgl",
-      powerPreference: "high-performance",
+      backgroundAlpha: options.backgroundAlpha ?? 0.1, // Make slightly visible for debugging
+      antialias: options.antialias ?? false,
+      autoDensity: false,
+      resolution: 1, // Keep simple for compatibility
+      forceCanvas: true, // Force Canvas renderer, avoid WebGL auto-detection
       hello: false, // Disable Pixi banner
     });
-  } catch (webglError) {
-    try {
-      // Fallback to Canvas renderer
-      app = new PixiApplication({
-        width: STAGE_WIDTH,
-        height: STAGE_HEIGHT,
-        backgroundAlpha: options.backgroundAlpha ?? 0,
-        antialias: options.antialias ?? false, // Disable antialiasing for Canvas
-        autoDensity: true,
-        resolution: dpr,
-        preference: "webgl2",
-        hello: false,
-      });
-    } catch (canvasError) {
-      // Final fallback without any preference
-      app = new PixiApplication({
-        width: STAGE_WIDTH,
-        height: STAGE_HEIGHT,
-        backgroundAlpha: options.backgroundAlpha ?? 0,
-        antialias: false,
-        autoDensity: false,
-        resolution: 1,
-        hello: false,
-      });
-    }
+  } catch (canvasError) {
+    // Final fallback with minimal options
+    console.log("Pixi Canvas failed, trying basic configuration:", canvasError);
+    app = new PixiApplication({
+      width: STAGE_WIDTH,
+      height: STAGE_HEIGHT,
+      backgroundAlpha: 0.1,
+      hello: false,
+    });
   }
 
   // Create container and overlay structure
