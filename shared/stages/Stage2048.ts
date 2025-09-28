@@ -517,15 +517,47 @@ export async function createStage2048(
   // Create Pixi application with FIXED dimensions
   const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
 
-  const app = new PixiApplication({
-    width: STAGE_WIDTH,
-    height: STAGE_HEIGHT,
-    backgroundAlpha: options.backgroundAlpha ?? 0,
-    antialias: options.antialias ?? true,
-    autoDensity: true,
-    resolution: dpr,
-    preference: "webgl",
-  });
+  // Try to create Pixi application with fallback renderer support
+  let app: any;
+  try {
+    // Try WebGL first
+    app = new PixiApplication({
+      width: STAGE_WIDTH,
+      height: STAGE_HEIGHT,
+      backgroundAlpha: options.backgroundAlpha ?? 0,
+      antialias: options.antialias ?? true,
+      autoDensity: true,
+      resolution: dpr,
+      preference: "webgl",
+      powerPreference: "high-performance",
+      hello: false, // Disable Pixi banner
+    });
+  } catch (webglError) {
+    try {
+      // Fallback to Canvas renderer
+      app = new PixiApplication({
+        width: STAGE_WIDTH,
+        height: STAGE_HEIGHT,
+        backgroundAlpha: options.backgroundAlpha ?? 0,
+        antialias: options.antialias ?? false, // Disable antialiasing for Canvas
+        autoDensity: true,
+        resolution: dpr,
+        preference: "webgl2",
+        hello: false,
+      });
+    } catch (canvasError) {
+      // Final fallback without any preference
+      app = new PixiApplication({
+        width: STAGE_WIDTH,
+        height: STAGE_HEIGHT,
+        backgroundAlpha: options.backgroundAlpha ?? 0,
+        antialias: false,
+        autoDensity: false,
+        resolution: 1,
+        hello: false,
+      });
+    }
+  }
 
   // Create container and overlay structure
   const container = document.createElement("div");
