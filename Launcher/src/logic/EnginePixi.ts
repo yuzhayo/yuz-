@@ -73,7 +73,6 @@ import {
   clamp01,
   normDeg,
   clampRpm60,
-  isWebGLAvailable,
   logicZIndexFor,
   logicApplyBasicTransform
 } from "./LayerCreator";
@@ -197,7 +196,7 @@ function createLayerSpinManager(): LayerSpinManager {
             const radPerSec = (rpm * Math.PI) / 30;
 
             const basicItem: BasicSpinItem = {
-              sprite: b.sprite,
+              sprite: b.sprite as Sprite,
               baseRad,
               radPerSec,
               dir,
@@ -206,10 +205,10 @@ function createLayerSpinManager(): LayerSpinManager {
 
             items.push(basicItem);
           }
-          rpmBySprite.set(b.sprite, rpm);
+          rpmBySprite.set(b.sprite as Sprite, rpm);
         } else {
           // For clock-enabled sprites, set RPM to 0 since LayerClock handles them
-          rpmBySprite.set(b.sprite, 0);
+          rpmBySprite.set(b.sprite as Sprite, 0);
         }
       }
     },
@@ -400,10 +399,10 @@ function createLayerOrbitManager(): LayerOrbitManager {
               ? b.cfg.orbitOrientDeg
               : 0;
           const orientDegRad = (orientDeg * Math.PI) / 180;
-          const spinRpm = spinRpmBySprite?.get(b.sprite) ?? 0;
+          const spinRpm = spinRpmBySprite?.get(b.sprite as Sprite) ?? 0;
 
           items.push({
-            sprite: b.sprite,
+            sprite: b.sprite as Sprite,
             cfg: b.cfg,
             dir,
             radPerSec,
@@ -608,12 +607,12 @@ function parseEffects(cfg: LayerConfig): { basic: BasicEffectSpec[]; advanced: A
 }
 
 function canUseAdvanced(): boolean {
-  const okGL = isWebGLAvailable();
+  // With Pixi-only rendering, WebGL is assumed to be available
   // @ts-ignore
   const mem = (navigator as any).deviceMemory as number | undefined;
   const cores = navigator.hardwareConcurrency || 4;
   const okHW = (mem === undefined || mem >= 4) && cores >= 4;
-  return okGL && okHW;
+  return okHW;
 }
 
 function easeLinear(t: number): number {
@@ -760,14 +759,14 @@ function createLayerEffectManager(): LayerEffectManager {
         if (advancedEffectsEnabled && effects.advanced.length > 0) {
           for (const spec of effects.advanced) {
             if (spec.type === "glow") {
-              const auraSprite = new Sprite(b.sprite.texture);
+              const auraSprite = new Sprite((b.sprite as Sprite).texture);
               auraSprite.anchor.set(0.5);
               auraSprite.tint = spec.color;
               auraSprite.alpha = spec.alpha;
               auraSprite.blendMode = 1; // BLEND_MODES.ADD
-              const parent = b.sprite.parent;
+              const parent = (b.sprite as Sprite).parent;
               if (parent) {
-                const index = parent.getChildIndex(b.sprite);
+                const index = parent.getChildIndex(b.sprite as Sprite);
                 parent.addChildAt(auraSprite, index);
               }
               item.auras.push({
@@ -779,13 +778,13 @@ function createLayerEffectManager(): LayerEffectManager {
                 alpha: spec.alpha,
               });
             } else if (spec.type === "bloom") {
-              const auraSprite = new Sprite(b.sprite.texture);
+              const auraSprite = new Sprite((b.sprite as Sprite).texture);
               auraSprite.anchor.set(0.5);
               auraSprite.alpha = Math.min(1, 0.3 + spec.strength * 0.4);
               auraSprite.blendMode = 1; // BLEND_MODES.ADD
-              const parent = b.sprite.parent;
+              const parent = (b.sprite as Sprite).parent;
               if (parent) {
-                const index = parent.getChildIndex(b.sprite);
+                const index = parent.getChildIndex(b.sprite as Sprite);
                 parent.addChildAt(auraSprite, index);
               }
               item.auras.push({
@@ -837,7 +836,8 @@ function createLayerEffectManager(): LayerEffectManager {
         // Apply basic effects
         b.sprite.alpha = Math.max(0, Math.min(1, alpha));
         const finalScale = item.baseScale * scaleMul;
-        b.sprite.scale.set(finalScale, finalScale);
+        const sprite = b.sprite as Sprite;
+        sprite.scale.set(finalScale, finalScale);
 
         // Apply tilt rotation delta
         const prev = item.prevTiltRad || 0;
@@ -856,7 +856,8 @@ function createLayerEffectManager(): LayerEffectManager {
             const T = a.pulseMs / 1000;
             if (T > 0) s = a.baseScale * (1 + 0.05 * Math.sin(((2 * Math.PI) / T) * elapsed));
           }
-          a.sprite.scale.set(s, s);
+          const auraSprite = a.sprite as Sprite;
+          auraSprite.scale.set(s, s);
         }
 
         // Apply distortion (additive position offset)
@@ -874,7 +875,8 @@ function createLayerEffectManager(): LayerEffectManager {
             const phase = (elapsed % T) / T;
             const mul = 1 + (item.shock.maxScale - 1) * Math.sin(Math.PI * phase);
             const s = item.shock.baseScale * mul;
-            b.sprite.scale.set(s, s); // Override scale from basic effects
+            const sprite = b.sprite as Sprite;
+            sprite.scale.set(s, s); // Override scale from basic effects
             if (item.shock.fade) {
               b.sprite.alpha = 0.8 + 0.2 * Math.cos(Math.PI * phase); // Override alpha from basic effects
             }
@@ -896,7 +898,7 @@ function createLayerEffectManager(): LayerEffectManager {
       for (const item of items) {
         for (const aura of item.auras) {
           try {
-            aura.sprite.destroy();
+            (aura.sprite as Sprite).destroy();
           } catch {
             // Ignore destroy errors
           }
@@ -1143,7 +1145,7 @@ function createLayerClockManager(): LayerClockManager {
     const clock = b.cfg.clock;
     if (!clock || !clock.enabled) return null;
 
-    const geometry = computeClockGeometry(b.sprite, clock, b.cfg.id);
+    const geometry = computeClockGeometry(b.sprite as Sprite, clock, b.cfg.id);
     if (!geometry) return null;
 
     const positionFallback = { xPct: b.cfg.position.xPct ?? 0, yPct: b.cfg.position.yPct ?? 0 };
@@ -1199,7 +1201,7 @@ function createLayerClockManager(): LayerClockManager {
     }
 
     return {
-      sprite: b.sprite,
+      sprite: b.sprite as Sprite,
       cfg: b.cfg,
       clock,
       geometry,
@@ -1478,7 +1480,7 @@ export function createPixiEngine(): PixiEngine {
       // Build RPM map for orbit system compatibility
       const spinRpmBySprite = new Map<Sprite, number>();
       for (const b of built) {
-        spinRpmBySprite.set(b.sprite, spinManager.getSpinRpm(b.sprite));
+        spinRpmBySprite.set(b.sprite as Sprite, spinManager.getSpinRpm(b.sprite as Sprite));
       }
 
       const orbitManager = createLayerOrbitManager();
@@ -1744,9 +1746,7 @@ export async function buildSceneFromLogic(
       console.warn("[buildSceneFromLogic] Failed to create Pixi factories:", e);
     }
   } else {
-    console.warn("[buildSceneFromLogic] Non-Pixi application detected, DOM support limited");
-    // For DOM or other engines, we could create a DOM sprite factory here
-    // But for now, we'll let LayerCreator handle the lack of sprite factory
+    console.warn("[buildSceneFromLogic] Non-Pixi application detected");
   }
   
   const layerCreatorManager = createLayerCreatorManager(spriteFactory);
@@ -1755,7 +1755,7 @@ export async function buildSceneFromLogic(
 
 // === CONSOLIDATED ENGINE ADAPTER ===
 // Renderer type selection
-export type RendererType = "pixi" | "dom";
+export type RendererType = "pixi";
 
 // Unified options type that supports both engines
 export type EngineAdapterOptions = {
@@ -1774,9 +1774,8 @@ export type EngineAdapterHandle = {
 };
 
 /**
- * LogicEngineAdapter provides a clean abstraction layer for renderer selection.
- * It can work with both EnginePixi and EngineDom backends while maintaining
- * a consistent interface for consumers.
+ * LogicEngineAdapter provides Pixi rendering functionality.
+ * Simplified to support only Pixi backend.
  */
 export class LogicEngineAdapter {
   private engine: LogicEngine | null = null;
@@ -1809,14 +1808,6 @@ export class LogicEngineAdapter {
           ...opts,
         };
         this.engineHandle = await this.engine.init(root, cfg, pixiOpts);
-      } else if (renderer === "dom") {
-        // Lazy load DOM engine to avoid circular dependencies
-        const domModule = await import("./EngineDom");
-        this.engine = domModule.createDomEngine();
-        const domOpts: any = {
-          ...opts,
-        };
-        this.engineHandle = await this.engine.init(root, cfg, domOpts);
       } else {
         throw new Error(`[LogicEngineAdapter] Unsupported renderer type: ${renderer}`);
       }
@@ -1899,10 +1890,7 @@ export class LogicEngineAdapter {
         const pixiEngine = this.engine as any;
         return pixiEngine.hasAnimations?.() ?? false;
       }
-      if (this.renderer === "dom" && this.engine) {
-        const domEngine = this.engine as any;
-        return domEngine.hasAnimations?.() ?? false;
-      }
+      // Only Pixi rendering is supported
       return false;
     } catch (error) {
       console.warn(`[LogicEngineAdapter] Error checking animations:`, error);
@@ -1932,54 +1920,7 @@ export async function mountRenderer(
   return await adapter.init(root, cfg, renderer, opts);
 }
 
-// === CONSOLIDATED LOGIC RENDERER ===
-export type LogicRendererProps = {
-  cfg: LogicConfig;
-  renderer?: RendererType;
-  className?: string;
-};
-
-export function LogicRenderer(props: LogicRendererProps) {
-  const { cfg, renderer = "pixi" } = props;
-  const ref = React.useRef<HTMLDivElement | null>(null);
-
-  React.useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    let handle: EngineAdapterHandle | null = null;
-
-    let cancelled = false;
-    (async () => {
-      try {
-        handle = await mountRenderer(el, cfg, renderer, { 
-          dprCap: 2, 
-          resizeTo: window 
-        });
-      } catch (e) {
-        if (!cancelled) {
-          console.error(`[LogicRenderer] Failed to mount ${renderer} renderer:`, e);
-        }
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-      try {
-        handle?.dispose();
-      } catch (error) {
-        console.error(`[LogicRenderer] Error disposing ${renderer} renderer:`, error);
-      }
-    };
-  }, [cfg, renderer]);
-
-  return React.createElement("div", { 
-    ref, 
-    className: props.className ?? "w-full h-full" 
-  });
-}
-
-// Export default for LogicRenderer
-export default LogicRenderer;
+// LogicRenderer component removed - use LogicStage with Pixi directly
 
 // Export convenience functions
 export function createEngine(): PixiEngine {
@@ -1994,7 +1935,6 @@ export {
   clamp01,
   normDeg,
   clampRpm60,
-  isWebGLAvailable,
   logicZIndexFor,
   logicApplyBasicTransform
 } from "./LayerCreator";

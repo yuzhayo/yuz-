@@ -5,49 +5,43 @@ import MainScreenRendererBadge from "./MainScreenRendererBadge";
 import MainScreenUpdater from "./MainScreenUpdater";
 import MainScreenApiTester from "./MainScreenApiTester";
 import { LogicStage } from "@shared/stages/Stage2048";
-import { LogicRenderer } from "./logic/EnginePixi";
-import { detectRenderer, type RendererMode } from "./logic/LayerCreator";
+import type { RendererMode } from "./logic/LayerCreator";
 import logicConfigJson from "./LogicConfig";
-import type { LogicConfig } from "./logic/sceneTypes";
+import type { LogicConfig } from "./logic/LayerCreator";
 
 export type MainScreenProps = {
-  rendererMode?: RendererMode; // 'auto' | 'pixi' | 'dom'
+  rendererMode?: RendererMode; // 'pixi' (DOM fallback removed)
 };
 
 /**
  * Layar utama launcher yang menampilkan navigasi dock.
- * Logic renderer kompleks dihapus untuk sementara.
+ * Menggunakan Pixi rendering untuk efek visual kosmik.
  */
 export default function MainScreen(props: MainScreenProps) {
-  const mode = props.rendererMode ?? "auto";
-  const chosen = detectRenderer(mode);
   const gesture = useMainScreenBtnGesture();
-  const label = chosen === "pixi" ? "Renderer: Pixi" : "Renderer: DOM";
+  const label = "Renderer: Pixi";
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800">
-      {/* Renderer canvas behind UI */}
+      {/* Pixi renderer canvas behind UI */}
       <div className="absolute inset-0">
-        {chosen === "pixi" ? (
-          <LogicStage 
-            buildSceneFromLogic={async (app: any, config: any) => {
-              const { buildSceneFromLogic } = await import('./logic/EnginePixi');
-              return buildSceneFromLogic(app, config);
-            }}
-            logicConfig={logicConfigJson as LogicConfig}
-          />
-        ) : (
-          <LogicRenderer cfg={logicConfigJson as LogicConfig} renderer="dom" />
-        )}
+        <LogicStage 
+          buildSceneFromLogic={async (app: any, config: any) => {
+            const { buildSceneFromLogic } = await import('./logic/EnginePixi');
+            return buildSceneFromLogic(app, config);
+          }}
+          logicConfig={logicConfigJson as LogicConfig}
+        />
       </div>
       {/* Invisible gesture target */}
       <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto" />
-      {/* Area utama untuk konten launcher */}
-      <div className="flex items-center justify-center h-full">
-        <div className="text-center space-y-4">
-          <h1 className="text-4xl font-bold text-white">'''</h1>
-          <p className="text-slate-300">Hold tap anywhere to access modules</p>
+      {/* Subtle navigation hint - only show when panel is closed */}
+      {!gesture.open && (
+        <div className="absolute top-4 left-4 z-10">
+          <div className="bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2 text-sm text-white/70 border border-white/10">
+            Tap and hold to access modules
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Navigation dock */}
       <MainScreenBtnPanel

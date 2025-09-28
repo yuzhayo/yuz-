@@ -570,5 +570,5 @@ export function createEffectManager(): LayerEffectManager {
   return createLayerEffectManager();
 }
 
-// Re-export utilities for convenience
-export { isWebGLAvailable } from "./LayerCreator";
+// Re-export utilities for convenience removed to avoid circular dependency
+// isWebGLAvailable can be imported directly from "./LayerCreator" if needed

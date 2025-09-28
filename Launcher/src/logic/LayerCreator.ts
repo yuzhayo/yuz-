@@ -111,38 +111,19 @@ function clampRpm60(v: unknown): number {
   return Math.min(60, Math.max(0, n));
 }
 
-// WebGL capability check and renderer detection (moved from LogicCapability.ts)
-export type RendererMode = "auto" | "pixi" | "dom";
-
-function isWebGLAvailable(): boolean {
+// WebGL availability check utility
+export function isWebGLAvailable(): boolean {
   try {
-    const c = document.createElement("canvas");
-    return !!(c.getContext("webgl2") || c.getContext("webgl"));
-  } catch {
+    const canvas = document.createElement('canvas');
+    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    return !!gl;
+  } catch (e) {
     return false;
   }
 }
 
-function getOverride(): "pixi" | "dom" | null {
-  try {
-    const sp = new URLSearchParams(window.location.search);
-    const q = sp.get("renderer");
-    if (q === "pixi" || q === "dom") return q;
-  } catch {}
-  try {
-    const ls = localStorage.getItem("renderer");
-    if (ls === "pixi" || ls === "dom") return ls;
-  } catch {}
-  return null;
-}
-
-export function detectRenderer(mode: RendererMode = "auto"): "pixi" | "dom" {
-  if (mode === "pixi" || mode === "dom") return mode;
-  const ov = getOverride();
-  if (ov) return ov;
-  // Conservative: prefer Pixi if WebGL exists; else DOM
-  return isWebGLAvailable() ? "pixi" : "dom";
-}
+// Pixi-only rendering mode
+export type RendererMode = "pixi";
 
 // Basic placement & ordering helpers (moved from LogicLoaderBasic.ts)
 function logicZIndexFor(cfg: LayerConfig): number {
@@ -503,7 +484,6 @@ export {
   clamp01, 
   clampRpm60, 
   normDeg, 
-  isWebGLAvailable,
   logicZIndexFor, 
   logicApplyBasicTransform 
 };

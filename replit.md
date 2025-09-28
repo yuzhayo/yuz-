@@ -37,20 +37,34 @@ The project is configured to work seamlessly in the Replit environment:
 - `npm run test`: Run Vitest test suite
 
 ## Recent Changes (September 28, 2025)
+
+### **Phase 1: Fresh GitHub Import & Initial Setup**
 - **Fresh GitHub Import**: Successfully imported fresh GitHub repository clone to Replit environment
 - **Dependencies Installation**: Installed all npm dependencies for monorepo and workspaces (bypassed Husky git hooks with --ignore-scripts)
 - **Vite Configuration Fix**: Updated all app vite configurations to use `allowedHosts: true` for proper Replit proxy compatibility
 - **Workflow Configuration**: Set up Launcher workflow running on port 5000 (`npm run dev:launcher`)
 - **Application Testing**: Verified Launcher app runs correctly with Pixi.js graphics, interactive cosmic clock interface, and HMR
 - **Deployment Setup**: Configured autoscale deployment with build (`npm run build:launcher`) and run (`npm run preview:5000`) commands
-- **Project Import Complete**: All components working - monorepo structure, frontend on port 5000, all apps properly configured, deployment ready for production
+
+### **Phase 2: DOM Fallback Removal & Pixi-Only Refactoring**
+- **Architecture Simplification**: Removed DOM fallback rendering to use only Pixi.js for better performance and maintainability
+- **Type System Cleanup**: Simplified `RendererMode` type from `"auto" | "pixi" | "dom"` to just `"pixi"`
+- **LayerCreator.ts Refactoring**: Removed `detectRenderer()`, `isWebGLAvailable()`, and `getOverride()` functions; fixed circular dependencies
+- **MainScreen.tsx Simplification**: Removed conditional rendering logic to always use LogicStage with Pixi's buildSceneFromLogic
+- **EnginePixi.ts Cleanup**: Removed LogicRenderer component and DOM handling in LogicEngineAdapter class
+- **EngineDom.ts Removal**: Deleted entire DOM engine implementation (~500+ lines of DOM-specific code)
+- **TypeScript Fixes**: Resolved all type casting issues and import/export errors
+- **WebGL Configuration**: Added explicit WebGL renderer preference to Pixi Application constructors
+- **UI State Fix**: Removed full-screen loading overlay to reveal cosmic clock interface as primary visual experience
+- **Project Import Complete**: All components working - Pixi-only rendering, simplified architecture, ~600+ lines of code removed
 
 ## Architecture Notes
-- The Launcher app uses Pixi.js for interactive graphics with DOM fallback
+- The Launcher app uses Pixi.js exclusively for interactive graphics with WebGL acceleration
 - Shared components and utilities are in the `/shared` directory
 - Each app has its own package.json and can be developed independently
 - Uses passkey authentication system in shared/auth
 - Local data storage system in shared/storage
+- Simplified single rendering path (Pixi-only) for better performance and maintainability
 
 ## User Preferences
 - Project uses TypeScript with strict type checking

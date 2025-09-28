@@ -524,6 +524,7 @@ export async function createStage2048(
     antialias: options.antialias ?? true,
     autoDensity: true,
     resolution: dpr,
+    preference: "webgl",
   });
 
   // Create container and overlay structure
@@ -613,6 +614,7 @@ export function createPixiApplication(options: Stage2048Options = {}, PixiApplic
     antialias: options.antialias ?? true,
     autoDensity: true,
     resolution: dpr,
+    preference: "webgl",
   });
 }
 

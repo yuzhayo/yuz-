@@ -1,4 +1,4 @@
-import type { LogicConfig } from "./logic/sceneTypes";
+import type { LogicConfig } from "./logic/LayerCreator";
 // Temporary shim: expose config from original location under the new logic/ path
 // @ts-ignore - JSON import without type
 import rawConfig from "./LogicConfig.json";
@@ -28,7 +28,7 @@ function resolveBundledAsset(path: string): string | null {
 function remapRegistry(cfg: LogicConfig): LogicConfig {
   const registry = { ...cfg.imageRegistry };
   for (const [key, value] of Object.entries(registry)) {
-    const mapped = resolveBundledAsset(value);
+    const mapped = resolveBundledAsset(value as string);
     if (mapped) registry[key] = mapped;
   }
   return { ...cfg, imageRegistry: registry };
