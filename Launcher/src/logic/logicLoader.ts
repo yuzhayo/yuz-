@@ -3,9 +3,8 @@ import type { Application } from "pixi.js";
 import type { LogicConfig, LayerConfig } from "./sceneTypes";
 import { logicApplyBasicTransform, logicZIndexFor } from "./LogicLoaderBasic";
 import { createLayerSpinManager } from "./LayerSpin";
-// clampRpm60 no longer used here (handled in LayerSpin module)
+import { createLayerClockManager } from "./LayerClock";
 import { buildOrbit } from "./LogicLoaderOrbit";
-import { buildClock } from "./LogicLoaderClock";
 import { buildEffects } from "./LogicLoaderEffects";
 import { buildEffectsAdvanced } from "./LogicLoaderEffectsAdvanced";
 
@@ -105,9 +104,13 @@ export async function buildSceneFromLogic(
     }
   }
 
-  // New unified spin runtime (handles both basic and clock-driven spins)
+  // Basic spin runtime (handles only basic RPM-based spins)
   const spinManager = createLayerSpinManager();
   spinManager.init(app, built);
+
+  // Clock runtime (handles clock-driven spins and orbital motion)  
+  const clockManager = createLayerClockManager();
+  clockManager.init(app, built);
 
   // Build RPM map for orbit system compatibility
   const spinRpmBySprite = new Map<Sprite, number>();
@@ -117,8 +120,6 @@ export async function buildSceneFromLogic(
 
   // Orbit runtime: build items and helpers
   const orbit = buildOrbit(app, built, spinRpmBySprite);
-  // Clock runtime (Phase 1: orbital motion only - spin handled by LayerSpin)
-  const clock = buildClock(app, built);
   // Effects (Phase 1: property effects only)
   const effects = buildEffects(app, built);
   const adv = buildEffectsAdvanced(app, built);
@@ -127,30 +128,31 @@ export async function buildSceneFromLogic(
   const onResize = () => {
     for (const b of built) logicApplyBasicTransform(app, b.sprite, b.cfg);
     spinManager.recompute();
+    clockManager.recompute();
     orbit.recompute(elapsed);
-    clock.recompute();
   };
   const resizeListener = () => onResize();
   window.addEventListener("resize", resizeListener);
 
   const tick = () => {
     const spinItems = spinManager.getItems();
+    const clockItems = clockManager.getItems();
     if (
       spinItems.length === 0 &&
       orbit.items.length === 0 &&
-      clock.items.length === 0 &&
+      clockItems.length === 0 &&
       effects.items.length === 0 &&
       adv.items.length === 0
     )
       return;
     const dt = (app.ticker.deltaMS || 16.667) / 1000;
     elapsed += dt;
-    // Unified Spin (handles both basic and clock-driven spins)
+    // Basic Spin (handles only basic RPM-based spins)
     spinManager.tick(elapsed);
     // Orbit
     orbit.tick(elapsed);
-    // Clock (orbital motion only - spin now handled by LayerSpin)
-    clock.tick();
+    // Clock (handles clock-driven spins and orbital motion)
+    clockManager.tick();
     // Effects
     effects.tick(elapsed, built);
     // Advanced Effects (gated)
@@ -161,10 +163,11 @@ export async function buildSceneFromLogic(
   const hasAnimations = () => {
     try {
       const spinItems = spinManager.getItems();
+      const clockItems = clockManager.getItems();
       return (
         spinItems.length > 0 ||
         orbit.items.length > 0 ||
-        clock.items.length > 0 ||
+        clockItems.length > 0 ||
         effects.items.length > 0 ||
         adv.items.length > 0
       );
@@ -192,6 +195,9 @@ export async function buildSceneFromLogic(
     } catch {}
     try {
       spinManager.dispose();
+    } catch {}
+    try {
+      clockManager.dispose();
     } catch {}
     try {
       (effects as any).cleanup?.();
