@@ -1,11 +1,13 @@
-@import '../../shared/fonts/taimingda.css';
+@import "../../shared/fonts/taimingda.css";
 /* Tailwind entry for Launcher (minimal, global-safe) */
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 /* Baseline reset tweaks */
-html, body, #root {
+html,
+body,
+#root {
   height: 100%;
 }
 
@@ -29,8 +31,17 @@ html, body, #root {
 .badge {
   @apply text-xs px-2 py-0.5 rounded bg-neutral-800/60;
 }
- @keyframes pulse {
- 0%   { transform: none; opacity: 1; }
- 50%  { transform: scale(1.02); opacity: 0.95; }
- 100% { transform: none; opacity: 1; }
+@keyframes pulse {
+  0% {
+    transform: none;
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.02);
+    opacity: 0.95;
+  }
+  100% {
+    transform: none;
+    opacity: 1;
+  }
 }

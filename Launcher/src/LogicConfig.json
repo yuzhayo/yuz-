@@ -1,14 +1,95 @@
 {
   "layersID": [
-    "L10","L11","L12","L13","L14","L15","L16","L17","L18","L19",
-    "L20","L21","L22","L23","L24","L25","L26","L27","L28","L29",
-    "L30","L31","L32","L33","L34","L35","L36","L37","L38","L39",
-    "L40","L41","L42","L43","L44","L45","L46","L47","L48","L49",
-    "L50","L51","L52","L53","L54","L55","L56","L57","L58","L59",
-    "L60","L61","L62","L63","L64","L65","L66","L67","L68","L69",
-    "L70","L71","L72","L73","L74","L75","L76","L77","L78","L79",
-    "L80","L81","L82","L83","L84","L85","L86","L87","L88","L89",
-    "L90","L91","L92","L93","L94","L95","L96","L97","L98","L99"
+    "L10",
+    "L11",
+    "L12",
+    "L13",
+    "L14",
+    "L15",
+    "L16",
+    "L17",
+    "L18",
+    "L19",
+    "L20",
+    "L21",
+    "L22",
+    "L23",
+    "L24",
+    "L25",
+    "L26",
+    "L27",
+    "L28",
+    "L29",
+    "L30",
+    "L31",
+    "L32",
+    "L33",
+    "L34",
+    "L35",
+    "L36",
+    "L37",
+    "L38",
+    "L39",
+    "L40",
+    "L41",
+    "L42",
+    "L43",
+    "L44",
+    "L45",
+    "L46",
+    "L47",
+    "L48",
+    "L49",
+    "L50",
+    "L51",
+    "L52",
+    "L53",
+    "L54",
+    "L55",
+    "L56",
+    "L57",
+    "L58",
+    "L59",
+    "L60",
+    "L61",
+    "L62",
+    "L63",
+    "L64",
+    "L65",
+    "L66",
+    "L67",
+    "L68",
+    "L69",
+    "L70",
+    "L71",
+    "L72",
+    "L73",
+    "L74",
+    "L75",
+    "L76",
+    "L77",
+    "L78",
+    "L79",
+    "L80",
+    "L81",
+    "L82",
+    "L83",
+    "L84",
+    "L85",
+    "L86",
+    "L87",
+    "L88",
+    "L89",
+    "L90",
+    "L91",
+    "L92",
+    "L93",
+    "L94",
+    "L95",
+    "L96",
+    "L97",
+    "L98",
+    "L99"
   ],
   "imageRegistry": {
     "a": "/shared/asset/SAMPLE.png",
@@ -34,8 +115,6 @@
     "HAND1": "/shared/asset/UI_Clock_HourHand.png",
     "HAND2": "/shared/asset/UI_Clock_MinuteHand.png",
 
-
-
     "BUBBLE": "/shared/asset/BUBBLE.png",
     "DESK": "/shared/asset/AchieveMedal_Desk_Short02.png",
     "SYSHEAD": "/shared/asset/SystemMessageBg.png",
@@ -44,13 +123,6 @@
     "GEAR8": "/shared/asset/UI_Img_SlimeCannont_Pic_08.png",
     "GREENDOTOFF": "/shared/asset/Prestige_SlotBase_Off.png",
     "GREENDOTON": "/shared/asset/Prestige_SlotBase.png",
-    
-
-
-
-
-
-
 
     "LOCK": "/shared/asset/V3_LockIcon.png"
   },
@@ -78,15 +150,24 @@
         "spinHand": "minute",
         "spinRadius": { "pct": 0.5 },
         "orbitHand": "hour",
-        "orbitCenter": { "xPct": 55, "yPct": 50 }},
+        "orbitCenter": { "xPct": 55, "yPct": 50 }
+      },
       "effects": [
-        { "type": "fade", "from": 0.8, "to": 1, "durationMs": 1500, "loop": true, "easing": "sineInOut" },
+        {
+          "type": "fade",
+          "from": 0.8,
+          "to": 1,
+          "durationMs": 1500,
+          "loop": true,
+          "easing": "sineInOut"
+        },
         { "type": "pulse", "property": "scale", "amp": 0.05, "periodMs": 1800, "phaseDeg": 0 },
         { "type": "tilt", "mode": "pointer", "axis": "both", "maxDeg": 6 },
         { "type": "glow", "color": 16753920, "alpha": 0.35, "scale": 0.2, "pulseMs": 2000 },
         { "type": "bloom", "strength": 0.6 },
         { "type": "distort", "ampPx": 1, "speed": 0.4 },
-        { "type": "shockwave", "periodMs": 1200, "maxScale": 1.3, "fade": true }]
+        { "type": "shockwave", "periodMs": 1200, "maxScale": 1.3, "fade": true }
+      ]
     },
     {
       "id": "L50",
@@ -102,18 +183,11 @@
         "spinHand": "second",
         "spinRadius": { "pct": 8 },
         "orbitHand": "",
-        "orbitCenter": { "xPct": 50, "yPct": 80 }},
-      "effects": [
-       ]
+        "orbitCenter": { "xPct": 50, "yPct": 80 }
+      },
+      "effects": []
     },
 
-
-
-
-
-
-
-    
     {
       "id": "L15",
       "imageRef": { "kind": "urlId", "id": "STARBG" },
@@ -163,10 +237,6 @@
       "spinDir": "ccw"
     },
 
-
-
-
-
     {
       "id": "L15",
       "imageRef": { "kind": "urlId", "id": "STARBGHOLE" },
@@ -175,8 +245,6 @@
       "spinRPM": 0.3,
       "spinDir": "cw"
     },
-
-
 
     {
       "id": "L15",
@@ -192,7 +260,7 @@
       "position": { "xPct": 50, "yPct": 50 },
       "scale": { "pct": 130 },
       "spinRPM": 0.5,
-      "spinDir": "cw"      
+      "spinDir": "cw"
     },
     {
       "id": "L15",
@@ -204,20 +272,14 @@
       "orbitRPM": 1,
       "orbitDir": "cw",
       "orbitCenter": { "xPct": 50, "yPct": 50 },
-      "orbitOrientDeg": 0    
+      "orbitOrientDeg": 0
     },
-   
-
-    
-
-
-
 
     {
       "id": "L20",
       "imageRef": { "kind": "urlId", "id": "CLOCKBG" },
       "position": { "xPct": 50, "yPct": 50 },
-      "scale": { "pct": 70 }   
+      "scale": { "pct": 70 }
     },
     {
       "id": "L21",
@@ -225,7 +287,14 @@
       "position": { "xPct": 50, "yPct": 28 },
       "scale": { "pct": 60 },
       "effects": [
-        { "type": "fade", "from": 0.1, "to": 1, "durationMs": 9000, "loop": true, "easing": "sineInOut" },
+        {
+          "type": "fade",
+          "from": 0.1,
+          "to": 1,
+          "durationMs": 9000,
+          "loop": true,
+          "easing": "sineInOut"
+        },
         { "type": "pulse", "property": "scale", "amp": 0.05, "periodMs": 5000, "phaseDeg": 0 }
       ]
     },
@@ -235,9 +304,16 @@
       "position": { "xPct": 50, "yPct": 72 },
       "scale": { "pct": 66 },
       "effects": [
-        { "type": "fade", "from": 0.1, "to": 1, "durationMs": 9000, "loop": true, "easing": "sineInOut" },
+        {
+          "type": "fade",
+          "from": 0.1,
+          "to": 1,
+          "durationMs": 9000,
+          "loop": true,
+          "easing": "sineInOut"
+        },
         { "type": "pulse", "property": "scale", "amp": 0.05, "periodMs": 5000, "phaseDeg": 0 }
-      ]   
+      ]
     },
     {
       "id": "L21",
@@ -245,9 +321,16 @@
       "position": { "xPct": 72, "yPct": 49.9 },
       "scale": { "pct": 72 },
       "effects": [
-        { "type": "fade", "from": 0.1, "to": 1, "durationMs": 9000, "loop": true, "easing": "sineInOut" },
+        {
+          "type": "fade",
+          "from": 0.1,
+          "to": 1,
+          "durationMs": 9000,
+          "loop": true,
+          "easing": "sineInOut"
+        },
         { "type": "pulse", "property": "scale", "amp": 0.05, "periodMs": 5000, "phaseDeg": 0 }
-      ]   
+      ]
     },
     {
       "id": "L21",
@@ -255,18 +338,23 @@
       "position": { "xPct": 28, "yPct": 49.5 },
       "scale": { "pct": 70 },
       "effects": [
-        { "type": "fade", "from": 0.1, "to": 1, "durationMs": 9000, "loop": true, "easing": "sineInOut" },
+        {
+          "type": "fade",
+          "from": 0.1,
+          "to": 1,
+          "durationMs": 9000,
+          "loop": true,
+          "easing": "sineInOut"
+        },
         { "type": "pulse", "property": "scale", "amp": 0.05, "periodMs": 5000, "phaseDeg": 0 }
-      ]   
+      ]
     },
-
 
     {
       "id": "L35",
       "imageRef": { "kind": "urlId", "id": "CLOCKGLOW" },
       "position": { "xPct": 50, "yPct": 50 },
       "scale": { "pct": 65.5 }
-      
     },
 
     {
@@ -276,83 +364,15 @@
       "scale": { "pct": 65.5 },
       "spinRPM": 1,
       "spinDir": "cw",
-      "effects": [
-         { "type": "glow", "color": 16753920, "alpha": 0.01, "scale": 4, "pulseMs": 2000 }
-      ]
+      "effects": [{ "type": "glow", "color": 16753920, "alpha": 0.01, "scale": 4, "pulseMs": 2000 }]
     },
     {
       "id": "L35",
       "imageRef": { "kind": "urlId", "id": "CLOCKGLOW2" },
       "position": { "xPct": 50, "yPct": 50 },
       "scale": { "pct": 90 },
-      "effects": [
-         { "type": "glow", "color": 16753920, "alpha": 0.01, "scale": 4, "pulseMs": 2000 }
-      ]
-
+      "effects": [{ "type": "glow", "color": 16753920, "alpha": 0.01, "scale": 4, "pulseMs": 2000 }]
     },
-    
-
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
     {
       "id": "L15",
@@ -362,99 +382,5 @@
       "spinRPM": 0.5,
       "spinDir": "cw"
     }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   ]
 }
-

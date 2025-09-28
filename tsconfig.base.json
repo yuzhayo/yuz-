@@ -18,15 +18,15 @@
     }
   },
   "exclude": [
-    "node_modules", 
-    "dist", 
+    "node_modules",
+    "dist",
     "coverage",
     "apps/**/dist",
-    "apps/**/coverage", 
+    "apps/**/coverage",
     "Launcher/dist",
     "Launcher/coverage",
     "src-yuz-old",
-    "yuzha-yo", 
+    "yuzha-yo",
     "attached_assets"
   ]
 }

@@ -7,10 +7,5 @@
       "@shared/*": ["../shared/*"]
     }
   },
-  "include": [
-    "src",
-    "env.d.ts",
-    "index.html",
-    "../shared"
-  ]
+  "include": ["src", "env.d.ts", "index.html", "../shared"]
 }

@@ -352,7 +352,7 @@ function recomputeItem(item: ClockItem) {
 
 function tickClock(items: ClockItem[]) {
   if (items.length === 0) return;
-  
+
   for (const item of items) {
     const parts = getTimeParts(item.time.source);
     const smooth = item.time.smooth;
@@ -451,7 +451,7 @@ export function createClockManager(): LayerClockManager {
 export function buildClock(app: Application, built: BuiltLayer[]) {
   const manager = createLayerClockManager();
   manager.init(app, built);
-  
+
   return {
     items: manager.getItems(),
     tick: () => manager.tick(),

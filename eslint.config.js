@@ -45,10 +45,7 @@ export default [
         "error",
         { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
       ],
-      "@typescript-eslint/consistent-type-imports": [
-        "error",
-        { prefer: "type-imports" },
-      ],
+      "@typescript-eslint/consistent-type-imports": ["error", { prefer: "type-imports" }],
       "@typescript-eslint/no-explicit-any": "off",
       "@typescript-eslint/ban-ts-comment": "off",
       "no-empty": ["error", { allowEmptyCatch: true }],
@@ -57,11 +54,7 @@ export default [
 
   // -- OVERRIDE: Node env for config & scripts --
   {
-    files: [
-      "**/*.config.{ts,js}",
-      "vite.config.{ts,js}",
-      "**/scripts/**/*.{ts,js}",
-    ],
+    files: ["**/*.config.{ts,js}", "vite.config.{ts,js}", "**/scripts/**/*.{ts,js}"],
     languageOptions: {
       parser: tsparser,
       parserOptions: {

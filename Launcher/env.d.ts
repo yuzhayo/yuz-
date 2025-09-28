@@ -5,16 +5,16 @@
  * Semua opsional: jika kosong, LauncherBtn fallback ke localhost:<port>.
  */
 interface ImportMetaEnv {
-  readonly VITE_URL_0SETTING?: string
-  readonly VITE_URL_1MENG?: string
-  readonly VITE_URL_3DATABASE?: string
-  readonly VITE_URL_4EXTRA?: string
-  readonly VITE_URL_5RARA?: string
+  readonly VITE_URL_0SETTING?: string;
+  readonly VITE_URL_1MENG?: string;
+  readonly VITE_URL_3DATABASE?: string;
+  readonly VITE_URL_4EXTRA?: string;
+  readonly VITE_URL_5RARA?: string;
 
   /** Paksa renderer: 'auto' | 'pixi' | 'dom' (opsional) */
-  readonly VITE_RENDERER?: 'auto' | 'pixi' | 'dom'
+  readonly VITE_RENDERER?: "auto" | "pixi" | "dom";
 }
 
 interface ImportMeta {
-  readonly env: ImportMetaEnv
+  readonly env: ImportMetaEnv;
 }

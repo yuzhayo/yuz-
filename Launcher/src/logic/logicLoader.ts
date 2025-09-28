@@ -108,7 +108,7 @@ export async function buildSceneFromLogic(
   const spinManager = createLayerSpinManager();
   spinManager.init(app, built);
 
-  // Clock runtime (handles clock-driven spins and orbital motion)  
+  // Clock runtime (handles clock-driven spins and orbital motion)
   const clockManager = createLayerClockManager();
   clockManager.init(app, built);
 
