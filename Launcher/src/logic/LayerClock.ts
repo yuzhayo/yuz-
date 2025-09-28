@@ -114,7 +114,7 @@ export interface LayerClockManager {
 
 // Engine-agnostic utility functions
 export function getSpriteDimensions(sp: GenericSprite): { width: number; height: number } | null {
-  // Try to get dimensions from texture (Pixi) or element (DOM)
+  // Get dimensions from Pixi texture
   const spriteAny = sp as any;
   let width: number;
   let height: number;
@@ -124,11 +124,6 @@ export function getSpriteDimensions(sp: GenericSprite): { width: number; height:
     const tex = spriteAny.texture;
     width = tex.orig?.width ?? tex.width ?? spriteAny.width;
     height = tex.orig?.height ?? tex.height ?? spriteAny.height;
-  }
-  // DOM element
-  else if (spriteAny.naturalWidth !== undefined) {
-    width = spriteAny.naturalWidth || spriteAny.width;
-    height = spriteAny.naturalHeight || spriteAny.height;
   }
   // Fallback to generic width/height
   else {

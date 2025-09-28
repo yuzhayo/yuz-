@@ -1,5 +1,4 @@
 import type { BuiltLayer, GenericSprite, GenericApplication } from "./LayerCreator";
-import { isWebGLAvailable } from "./LayerCreator";
 
 // Effect types for LayerConfig
 export type LayerEffectConfig = Array<
@@ -261,13 +260,17 @@ function parseEffects(cfg: { effects?: any }): {
 }
 
 // Check if advanced effects can be used
-function canUseAdvanced(): boolean {
-  const okGL = isWebGLAvailable();
+function canUseAdvanced(webglCapable: boolean = true): boolean {
+  // Advanced effects require WebGL renderer capability
+  // This parameter should be set based on actual Pixi renderer type
+  
+  // Also check hardware capabilities
   // @ts-ignore
   const mem = (navigator as any).deviceMemory as number | undefined;
   const cores = navigator.hardwareConcurrency || 4;
   const okHW = (mem === undefined || mem >= 4) && cores >= 4;
-  return okGL && okHW;
+  
+  return webglCapable && okHW;
 }
 
 // Easing functions
@@ -279,7 +282,7 @@ function easeSineInOut(t: number): number {
   return 0.5 - 0.5 * Math.cos(Math.PI * 2 * t);
 }
 
-// Helper function for computing basic effect state (for DOM stage reuse)
+// Helper function for computing basic effect state
 export function computeBasicEffectState(
   effects: BasicEffectSpec[],
   tilt: { prevTiltRad?: number },
@@ -344,6 +347,7 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
   let px = 0.5;
   let py = 0.5;
   let hasPointerListeners = false;
+  let advancedEffectsEnabled = false;
 
   const onMouse = (ev: MouseEvent) => {
     const w = window.innerWidth || 1;
@@ -379,12 +383,26 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
     } catch {}
   }
 
-  const advancedEffectsEnabled = canUseAdvanced();
 
   return {
     init(app: GenericApplication, built: BuiltLayer[]) {
       _app = app;
       items.length = 0;
+
+      // Check WebGL capability from app renderer if available
+      let webglCapable = false;
+      try {
+        const pixiApp = app as any;
+        if (pixiApp && pixiApp.renderer) {
+          // Check if renderer has WebGL context (gl property)
+          webglCapable = !!pixiApp.renderer.gl;
+        }
+      } catch {
+        // If we can't determine renderer type, assume WebGL is not available
+        webglCapable = false;
+      }
+      
+      advancedEffectsEnabled = canUseAdvanced(webglCapable);
 
       // Check if we need pointer listeners for tilt effects
       let needsPointerListeners = false;
@@ -587,5 +605,3 @@ export function createEffectManager(): LayerEffectManager {
   return createLayerEffectManager();
 }
 
-// Re-export utilities for convenience removed to avoid circular dependency
-// isWebGLAvailable can be imported directly from "./LayerCreator" if needed

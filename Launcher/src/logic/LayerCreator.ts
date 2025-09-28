@@ -111,16 +111,6 @@ function clampRpm60(v: unknown): number {
   return Math.min(60, Math.max(0, n));
 }
 
-// WebGL availability check utility
-export function isWebGLAvailable(): boolean {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
-    return !!gl;
-  } catch {
-    return false;
-  }
-}
 
 // Pixi-only rendering mode
 export type RendererMode = "pixi";
