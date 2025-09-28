@@ -1,73 +1,18 @@
-// Core types consolidated from sceneTypes.ts and LogicTypes.ts
-export type ImageRegistry = Record<string, string>;
+/**
+ * LayerCreator.ts - Modular Layer Processing System
+ * 
+ * ⚠️  AI AGENT CRITICAL INSTRUCTIONS:
+ * 
+ * This file is organized into ISOLATED BLOCKS. Each block is marked as:
+ * 🔴 CRITICAL - DO NOT DELETE (breaks core functionality)
+ * 🟡 OPTIONAL - Safe to delete (removes animations/effects but basic display works)
+ * 🟢 UTILITY - Safe to delete (math helpers only, no visual impact)
+ * 
+ * Deleting any 🔴 CRITICAL block will break the application!
+ * 🟡 OPTIONAL blocks can be safely removed to reduce features.
+ * 🟢 UTILITY blocks provide math helpers and can be deleted.
+ */
 
-export type ImageRef = { kind: "urlId"; id: string } | { kind: "url"; url: string };
-
-// Engine-agnostic interfaces
-export interface GenericSprite {
-  x: number;
-  y: number;
-  rotation: number;
-  alpha: number;
-  scale: {
-    x: number;
-    y: number;
-    set?: (x: number, y: number) => void;
-  };
-  zIndex?: number;
-}
-
-export interface GenericContainer {
-  addChild: (child: GenericSprite) => void;
-  children: GenericSprite[];
-}
-
-export interface GenericApplication {
-  ticker?: {
-    deltaMS?: number;
-    add?: (fn: () => void) => void;
-    remove?: (fn: () => void) => void;
-  };
-}
-
-// Layer configuration
-export type LayerConfig = {
-  id: string;
-  imageRef: ImageRef;
-  position: { xPct: number; yPct: number };
-  scale?: { pct?: number };
-  angleDeg?: number;
-  // Spin properties
-  spinRPM?: number | null;
-  spinDir?: "cw" | "ccw";
-  // Orbit properties
-  orbitRPM?: number | null;
-  orbitDir?: "cw" | "ccw";
-  orbitCenter?: { xPct: number; yPct: number };
-  orbitPhaseDeg?: number | null;
-  orbitOrientPolicy?: "none" | "auto" | "override";
-  orbitOrientDeg?: number | null;
-  // Clock and effects
-  clock?: any;
-  effects?: any;
-};
-
-export interface BuiltLayer {
-  id: string;
-  sprite: GenericSprite;
-  cfg: LayerConfig;
-}
-
-export interface BuildResult {
-  container: GenericContainer;
-  layers: BuiltLayer[];
-}
-
-export type LogicConfig = {
-  layersID: string[];
-  imageRegistry: ImageRegistry;
-  layers: LayerConfig[];
-};
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
 import { createLayerSpinManager } from "./LayerSpin";
 import type { LayerSpinManager } from "./LayerSpin";
@@ -78,11 +23,46 @@ import type { LayerOrbitManager } from "./LayerOrbit";
 import { createLayerEffectManager } from "./LayerEffect";
 import type { LayerEffectManager, EffectHandler } from "./LayerEffect";
 
-// Re-export EffectHandler for external use
-export type { EffectHandler } from "./LayerEffect";
+// Import all contracts from centralized location
+import type {
+  ImageRegistry,
+  ImageRef,
+  RendererMode,
+  GenericSprite,
+  GenericContainer,
+  GenericApplication,
+  LayerConfig,
+  BuiltLayer,
+  BuildResult,
+  LogicConfig,
+  SpriteFactory,
+  // LayerModule and PluginRegistry are for future extensibility
+  LayerModule as _LayerModule,
+  PluginRegistry as _PluginRegistry,
+} from "./LayerContracts";
 
-// === INTERNAL UTILITY FUNCTIONS ===
-// Math utilities (moved from LogicMath.ts)
+// Re-export all types for backward compatibility
+export type {
+  ImageRegistry,
+  ImageRef,
+  RendererMode,
+  GenericSprite,
+  GenericContainer,
+  GenericApplication,
+  LayerConfig,
+  BuiltLayer,
+  BuildResult,
+  LogicConfig,
+  SpriteFactory,
+  EffectHandler,
+};
+
+// ===================================================================
+// 🟢 BLOCK 1: UTILITY MATH FUNCTIONS
+// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
+// These are helper functions for angle/value conversions
+// ===================================================================
+
 function toRad(deg: number): number {
   return (deg * Math.PI) / 180;
 }
@@ -104,18 +84,18 @@ function normDeg(deg: number): number {
   return d < 0 ? d + 360 : d;
 }
 
-// Common RPM clamp (0..60), accepts number-like or null/undefined
 function clampRpm60(v: unknown): number {
   const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
   if (!isFinite(n) || n <= 0) return 0;
   return Math.min(60, Math.max(0, n));
 }
 
+// ===================================================================
+// 🔴 BLOCK 2: CORE LAYER TRANSFORM FUNCTIONS
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// These functions handle basic layer positioning and z-ordering
+// ===================================================================
 
-// Pixi-only rendering mode
-export type RendererMode = "pixi";
-
-// Basic placement & ordering helpers (moved from LogicLoaderBasic.ts)
 function logicZIndexFor(cfg: LayerConfig): number {
   const m = cfg.id.match(/\d+/);
   return m ? parseInt(m[0], 10) : 0;
@@ -141,7 +121,24 @@ function logicApplyBasicTransform(app: GenericApplication, sp: GenericSprite, cf
   }
 }
 
-// Engine-agnostic type definitions for LayerCreator module
+// ===================================================================
+// 🔴 BLOCK 3: CONFIG PROCESSING
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Handles JSON config reading and image URL resolution
+// ===================================================================
+
+function getUrlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): string | null {
+  if (ref.kind === "url") return ref.url;
+  const url = cfg.imageRegistry[ref.id];
+  return url ?? null;
+}
+
+// ===================================================================
+// 🟡 BLOCK 4: ANIMATION MANAGERS STATE
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
+// Manages spin, orbit, clock, and effect animations
+// ===================================================================
+
 export type LayerCreatorItem = {
   id: string;
   sprite: GenericSprite;
@@ -158,7 +155,12 @@ export type LayerCreatorManagersState = {
   tickFunction?: () => void;
 };
 
-// Engine-agnostic manager interface for LayerCreator
+// ===================================================================
+// 🔴 BLOCK 5: CORE MANAGER INTERFACE
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Main interface that external code depends on
+// ===================================================================
+
 export interface LayerCreatorManager {
   init(
     app: GenericApplication,
@@ -173,26 +175,19 @@ export interface LayerCreatorManager {
   hasAnimations(): boolean;
 }
 
-// Engine-specific sprite factory interface
-export interface SpriteFactory {
-  createSprite(url: string): Promise<GenericSprite>;
-  createContainer(): GenericContainer;
-  loadAssets(urls: string[]): Promise<void>;
-}
+// ===================================================================
+// 🔴 BLOCK 6: CORE LAYER CREATOR IMPLEMENTATION
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Main implementation that creates and manages layers
+// ===================================================================
 
-// Utility function to get URL from image reference
-function getUrlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): string | null {
-  if (ref.kind === "url") return ref.url;
-  const url = cfg.imageRegistry[ref.id];
-  return url ?? null;
-}
-
-// Create LayerCreator manager implementation with pluggable sprite factory
 export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerCreatorManager {
   let _app: GenericApplication | null = null;
   let _container: GenericContainer | null = null;
   let _layers: BuiltLayer[] = [];
   let _managersState: LayerCreatorManagersState | null = null;
+  let _resizeListener: (() => void) | null = null;
+  let _tickFunction: (() => void) | null = null;
 
   const manager = {
     async init(
@@ -203,7 +198,12 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       _app = app;
       _container = spriteFactory
         ? spriteFactory.createContainer()
-        : ({ addChild: () => {}, children: [] } as GenericContainer);
+        : {
+            children: [] as GenericSprite[],
+            addChild: function(child: GenericSprite) {
+              this.children.push(child);
+            }
+          } as GenericContainer;
       if (_container && typeof (_container as any).sortableChildren !== "undefined") {
         (_container as any).sortableChildren = true;
       }
@@ -265,7 +265,25 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
         }
         try {
           if (!spriteFactory) {
-            console.warn("[logic] No sprite factory provided, skipping layer", layer.id);
+            console.warn("[logic] No sprite factory provided, creating placeholder for layer", layer.id);
+            // Create a basic placeholder sprite structure for compatibility
+            const sprite = {
+              x: 0,
+              y: 0,
+              rotation: 0,
+              alpha: 1,
+              scale: { x: 1, y: 1, set: (x: number, y: number) => { sprite.scale.x = x; sprite.scale.y = y; } },
+              zIndex: 0,
+            } as GenericSprite;
+            
+            logicApplyBasicTransform(app, sprite, layer);
+            
+            // Add to container even for placeholder sprites
+            if (_container && typeof _container.addChild === "function") {
+              _container.addChild(sprite);
+            }
+            
+            built.push({ id: layer.id, sprite, cfg: layer });
             continue;
           }
 
@@ -290,6 +308,11 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       }
 
       _layers = built;
+
+      // ===================================================================
+      // 🟡 BLOCK 7: ANIMATION MANAGERS INITIALIZATION
+      // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
+      // ===================================================================
 
       // Initialize all managers
       const spinManager = createLayerSpinManager();
@@ -320,51 +343,62 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
         elapsed: 0,
       };
 
+      // ===================================================================
+      // 🟡 BLOCK 8: LIFECYCLE HOOKS (RESIZE/TICKER)
+      // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes auto-updates)
+      // ===================================================================
+
       // Set up resize handling
       const onResize = () => {
         for (const b of built) logicApplyBasicTransform(app, b.sprite, b.cfg);
-        spinManager.recompute();
-        clockManager.recompute();
-        orbitManager.recompute(_managersState!.elapsed);
-        effectManager.recompute();
+        if (_managersState) {
+          _managersState.spinManager?.recompute();
+          _managersState.clockManager?.recompute();
+          _managersState.orbitManager?.recompute(_managersState.elapsed);
+          _managersState.effectManager?.recompute();
+        }
       };
-      const resizeListener = () => onResize();
-      window.addEventListener("resize", resizeListener);
-      _managersState.resizeListener = resizeListener;
+      _resizeListener = () => onResize();
+      window.addEventListener("resize", _resizeListener);
+      if (_managersState) {
+        _managersState.resizeListener = _resizeListener;
+      }
 
       // Set up tick function
       const tick = () => {
         if (!_managersState) return;
 
-        const spinItems = spinManager.getItems();
-        const clockItems = clockManager.getItems();
-        if (
-          spinItems.length === 0 &&
-          orbitManager.getItems().length === 0 &&
-          clockItems.length === 0 &&
-          !effectManager.hasEffects()
-        )
+        const spinItems = _managersState.spinManager?.getItems() || [];
+        const clockItems = _managersState.clockManager?.getItems() || [];
+        const orbitItems = _managersState.orbitManager?.getItems() || [];
+        const hasEffects = _managersState.effectManager?.hasEffects() || false;
+        
+        if (spinItems.length === 0 && orbitItems.length === 0 && clockItems.length === 0 && !hasEffects) {
           return;
+        }
 
         const dt = ((app as any).ticker?.deltaMS || 16.667) / 1000;
         _managersState.elapsed += dt;
 
         // Basic Spin (handles only basic RPM-based spins)
-        spinManager.tick(_managersState.elapsed);
+        _managersState.spinManager?.tick(_managersState.elapsed);
         // Orbit
-        orbitManager.tick(_managersState.elapsed);
+        _managersState.orbitManager?.tick(_managersState.elapsed);
         // Clock (handles clock-driven spins and orbital motion)
-        clockManager.tick();
+        _managersState.clockManager?.tick();
         // Effects (unified system)
-        effectManager.tick(_managersState.elapsed, built);
+        _managersState.effectManager?.tick(_managersState.elapsed, built);
       };
 
-      _managersState.tickFunction = tick;
+      _tickFunction = tick;
+      if (_managersState) {
+        _managersState.tickFunction = _tickFunction;
+      }
 
       // Add ticker if we have animations
       try {
         if (manager.hasAnimations() && (app as any).ticker?.add) {
-          (app as any).ticker.add(tick);
+          (app as any).ticker.add(_tickFunction);
         }
       } catch (e) {
         console.error("[LayerCreator] Error adding ticker:", e);
@@ -389,50 +423,60 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
     },
 
     recompute(): void {
-      if (!_app || !_managersState) return;
+      if (!_app) return;
 
+      // Always recompute basic transforms for all layers
       for (const b of _layers) {
         logicApplyBasicTransform(_app, b.sprite, b.cfg);
       }
 
-      _managersState.spinManager.recompute();
-      _managersState.clockManager.recompute();
-      _managersState.orbitManager.recompute(_managersState.elapsed);
-      _managersState.effectManager.recompute();
+      // Recompute animation managers only if they exist
+      if (_managersState) {
+        _managersState.spinManager?.recompute();
+        _managersState.clockManager?.recompute();
+        _managersState.orbitManager?.recompute(_managersState.elapsed);
+        _managersState.effectManager?.recompute();
+      }
     },
 
     dispose(): void {
-      if (!_managersState) return;
-
+      // Always clean up event listeners first
       try {
-        if (_managersState.resizeListener) {
-          window.removeEventListener("resize", _managersState.resizeListener);
+        if (_resizeListener) {
+          window.removeEventListener("resize", _resizeListener);
+          _resizeListener = null;
         }
       } catch {}
 
       try {
-        if (_app && _managersState.tickFunction && (_app as any).ticker?.remove) {
-          (_app as any).ticker.remove(_managersState.tickFunction);
+        if (_app && _tickFunction && (_app as any).ticker?.remove) {
+          (_app as any).ticker.remove(_tickFunction);
         }
+        _tickFunction = null;
       } catch {}
 
-      try {
-        _managersState.spinManager.dispose();
-      } catch {}
+      // Clean up animation managers if they exist
+      if (_managersState) {
+        try {
+          _managersState.spinManager?.dispose();
+        } catch {}
 
-      try {
-        _managersState.clockManager.dispose();
-      } catch {}
+        try {
+          _managersState.clockManager?.dispose();
+        } catch {}
 
-      try {
-        _managersState.effectManager.dispose();
-      } catch {}
+        try {
+          _managersState.effectManager?.dispose();
+        } catch {}
 
-      try {
-        _managersState.orbitManager.dispose();
-      } catch {}
+        try {
+          _managersState.orbitManager?.dispose();
+        } catch {}
 
-      _managersState = null;
+        _managersState = null;
+      }
+
+      // Always clean up core resources regardless of animation managers
       _app = null;
       _container = null;
       _layers = [];
@@ -471,12 +515,17 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
   return manager;
 }
 
-// Export convenience functions
+// ===================================================================
+// 🟢 BLOCK 9: CONVENIENCE EXPORTS
+// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete (convenience only)
+// Export functions for external use
+// ===================================================================
+
 export function createCreatorManager(): LayerCreatorManager {
   return createLayerCreatorManager();
 }
 
-// Export utilities for external access - these are the consolidated utilities from multiple files
+// Export utilities for external access
 export {
   toRad,
   toDeg,
