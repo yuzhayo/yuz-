@@ -27,11 +27,11 @@ export interface LayerSpinManager {
 export function createLayerSpinManager(): LayerSpinManager {
   const items: SpinItem[] = [];
   const rpmBySprite = new Map<Sprite, number>();
-  let app: Application | null = null;
+  let _app: Application | null = null;
 
   return {
     init(application: Application, built: BuiltLayer[]) {
-      app = application;
+      _app = application;
       items.length = 0;
       rpmBySprite.clear();
 
@@ -77,7 +77,7 @@ export function createLayerSpinManager(): LayerSpinManager {
     dispose() {
       items.length = 0;
       rpmBySprite.clear();
-      app = null;
+      _app = null;
     },
 
     getSpinRpm(sprite: Sprite): number {

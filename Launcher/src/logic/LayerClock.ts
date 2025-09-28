@@ -410,11 +410,11 @@ function tickClock(items: ClockItem[]) {
 // Create unified clock manager
 export function createLayerClockManager(): LayerClockManager {
   const items: ClockItem[] = [];
-  let app: Application | null = null;
+  let _app: Application | null = null;
 
   return {
     init(application: Application, built: BuiltLayer[]) {
-      app = application;
+      _app = application;
       items.length = 0;
 
       for (const b of built) {
@@ -433,7 +433,7 @@ export function createLayerClockManager(): LayerClockManager {
 
     dispose() {
       items.length = 0;
-      app = null;
+      _app = null;
     },
 
     getItems(): ClockItem[] {
