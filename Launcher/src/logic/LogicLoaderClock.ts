@@ -155,13 +155,7 @@ function computeGeometry(sprite: Sprite, clock: ClockConfig, layerId: string): C
   }
 }
 
-function resolveSpinRadius(clock: ClockConfig): SpinRadius {
-  const rawValue = clock.spinRadius?.value
-  const value = typeof rawValue === 'number' && isFinite(rawValue) ? Math.max(0, rawValue) : null
-  const rawPct = clock.spinRadius?.pct
-  const pct = typeof rawPct === 'number' && isFinite(rawPct) ? Math.max(0, rawPct) / 100 : null
-  return { value, pct }
-}
+// Note: resolveSpinRadius moved to LayerSpin.ts
 
 function resolveTimeSource(clock: ClockConfig): TimeSource {
   const tz = clock.timezone ?? 'device'
@@ -217,13 +211,10 @@ function createClockItem(b: BuiltLayer): ClockItem | null {
   const spinHand = clock.spinHand && clock.spinHand !== 'none' ? clock.spinHand : null
   const orbitHand = clock.orbitHand && clock.orbitHand !== 'none' ? clock.orbitHand : null
 
-  const spinRadius = resolveSpinRadius(clock)
-  if (spinHand && spinRadius.value == null && spinRadius.pct == null) {
-    warnClock(b.cfg.id, 'spinHand set but spinRadius missing; defaulting to base-tip length')
-  }
+  // Note: Spin logic now handled by LayerSpin module
   const spin = {
     hand: spinHand,
-    radius: spinRadius,
+    radius: { value: null, pct: null }, // Placeholder - actual logic in LayerSpin
     staticAngle: spinHand ? 0 : toRad(clock.tip?.angleDeg ?? 0),
     phase: 0,
   }
@@ -264,7 +255,6 @@ function createClockItem(b: BuiltLayer): ClockItem | null {
   debugClock(b.cfg.id, 'resolved', {
     centerPct,
     spinHand,
-    spinRadius,
     orbitHand,
     orbitRadius: orbit?.radius ?? null
   })
@@ -308,17 +298,10 @@ function recomputeItem(item: ClockItem) {
   const geom = computeGeometry(item.sprite, item.clock, item.cfg.id)
   if (geom) item.geometry = geom
 
-  item.spin.radius = resolveSpinRadius(item.clock)
-  if (!item.spin.hand) {
-    item.spin.staticAngle = toRad(item.clock.tip?.angleDeg ?? 0)
-  }
+  // Note: Spin-related logic moved to LayerSpin.ts
 }
 
-function resolveSpinRadiusPx(item: ClockItem, maxScale: number): number {
-  if (item.spin.radius.value != null) return item.spin.radius.value
-  if (item.spin.radius.pct != null) return item.spin.radius.pct * item.geometry.baseTipLength * maxScale
-  return 0
-}
+// Note: resolveSpinRadiusPx moved to LayerSpin.ts
 
 function tickClock(items: ClockItem[]) {
   if (items.length === 0) return
@@ -330,6 +313,7 @@ function tickClock(items: ClockItem[]) {
     let centerX = item.centerPx.x
     let centerY = item.centerPx.y
 
+    // Handle orbital motion for clock hands
     if (item.orbit) {
       if (item.orbit.radius > 1e-3) {
         const orbitAngle = (item.orbit.hand ? timeAngleRad(parts, item.orbit.hand, format, smooth) : 0) + item.orbit.phase
@@ -339,29 +323,14 @@ function tickClock(items: ClockItem[]) {
         centerX = item.orbit.centerPx.x
         centerY = item.orbit.centerPx.y
       }
+      
+      // For orbital items, just update position - spin is handled by LayerSpin module
+      item.sprite.x = centerX
+      item.sprite.y = centerY
     }
-
-    const spinAngle = item.spin.hand
-      ? timeAngleRad(parts, item.spin.hand, format, smooth) + item.spin.phase
-      : item.spin.staticAngle
-
-    const scaleX = item.sprite.scale.x
-    const scaleY = item.sprite.scale.y
-    const maxScale = Math.max(Math.abs(scaleX), Math.abs(scaleY))
-    const radiusPx = resolveSpinRadiusPx(item, maxScale)
-
-    const baseX = centerX + radiusPx * Math.cos(spinAngle)
-    const baseY = centerY + radiusPx * Math.sin(spinAngle)
-
-    const rotation = spinAngle - item.geometry.baseTipAngle
-    const baseOffset = rotateVec({
-      x: item.geometry.baseLocal.x * scaleX,
-      y: item.geometry.baseLocal.y * scaleY,
-    }, rotation)
-
-    item.sprite.x = baseX - baseOffset.x
-    item.sprite.y = baseY - baseOffset.y
-    item.sprite.rotation = rotation
+    
+    // Note: Spin logic is now handled by LayerSpin module
+    // This function now focuses only on orbital clock behavior
   }
 }
 

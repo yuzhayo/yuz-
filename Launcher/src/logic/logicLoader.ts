@@ -2,8 +2,8 @@ import { Assets, Container, Sprite } from 'pixi.js'
 import type { Application } from 'pixi.js'
 import type { LogicConfig, LayerConfig } from './sceneTypes'
 import { logicApplyBasicTransform, logicZIndexFor } from './LogicLoaderBasic'
-import { buildSpin, tickSpin } from './LogicLoaderSpin'
-// clampRpm60 no longer used here (handled in Orbit/Spin modules)
+import { createLayerSpinManager } from './LayerSpin'
+// clampRpm60 no longer used here (handled in LayerSpin module)
 import { buildOrbit } from './LogicLoaderOrbit'
 import { buildClock } from './LogicLoaderClock'
 import { buildEffects } from './LogicLoaderEffects'
@@ -92,11 +92,19 @@ export async function buildSceneFromLogic(app: Application, cfg: LogicConfig): P
     }
   }
 
-  // Spin runtime: build items and map (no behavior change)
-  const { items: spinItems, rpmBySprite: spinRpmBySprite } = buildSpin(app, built)
+  // New unified spin runtime (handles both basic and clock-driven spins)
+  const spinManager = createLayerSpinManager()
+  spinManager.init(app, built)
+  
+  // Build RPM map for orbit system compatibility
+  const spinRpmBySprite = new Map<Sprite, number>()
+  for (const b of built) {
+    spinRpmBySprite.set(b.sprite, spinManager.getSpinRpm(b.sprite))
+  }
+  
   // Orbit runtime: build items and helpers
   const orbit = buildOrbit(app, built, spinRpmBySprite)
-  // Clock runtime (Phase 1: rotation override only)
+  // Clock runtime (Phase 1: orbital motion only - spin handled by LayerSpin)
   const clock = buildClock(app, built)
   // Effects (Phase 1: property effects only)
   const effects = buildEffects(app, built)
@@ -105,6 +113,7 @@ export async function buildSceneFromLogic(app: Application, cfg: LogicConfig): P
   let elapsed = 0
   const onResize = () => {
     for (const b of built) logicApplyBasicTransform(app, b.sprite, b.cfg)
+    spinManager.recompute()
     orbit.recompute(elapsed)
     clock.recompute()
   }
@@ -112,28 +121,48 @@ export async function buildSceneFromLogic(app: Application, cfg: LogicConfig): P
   window.addEventListener('resize', resizeListener)
 
   const tick = () => {
+    const spinItems = spinManager.getItems()
     if (spinItems.length === 0 && orbit.items.length === 0 && clock.items.length === 0 && effects.items.length === 0 && adv.items.length === 0) return
     const dt = (app.ticker.deltaMS || 16.667) / 1000
     elapsed += dt
-    // Spin
-    tickSpin(spinItems, elapsed)
+    // Unified Spin (handles both basic and clock-driven spins)
+    spinManager.tick(elapsed)
     // Orbit
     orbit.tick(elapsed)
-    // Clock (applies overrides when enabled)
+    // Clock (orbital motion only - spin now handled by LayerSpin)
     clock.tick()
     // Effects
     effects.tick(elapsed, built)
     // Advanced Effects (gated)
     adv.tick(elapsed, built)
   }
-  if (spinItems.length > 0 || orbit.items.length > 0 || clock.items.length > 0 || effects.items.length > 0 || adv.items.length > 0) {
-    app.ticker.add(tick)
+  
+  // Always add ticker if we have any animations
+  const hasAnimations = () => {
+    try {
+      const spinItems = spinManager.getItems()
+      return spinItems.length > 0 || orbit.items.length > 0 || clock.items.length > 0 || effects.items.length > 0 || adv.items.length > 0
+    } catch (e) {
+      console.warn('[logicLoader] Error checking animations:', e)
+      return false
+    }
+  }
+  
+  try {
+    if (hasAnimations()) {
+      app.ticker.add(tick)
+    }
+  } catch (e) {
+    console.error('[logicLoader] Error adding ticker:', e)
   }
 
   const prevCleanup = (container as any)._cleanup as (() => void) | undefined
   ;(container as any)._cleanup = () => {
     try { window.removeEventListener('resize', resizeListener) } catch {}
-    try { if (spinItems.length > 0 || orbit.items.length > 0 || clock.items.length > 0 || effects.items.length > 0 || adv.items.length > 0) app.ticker.remove(tick) } catch {}
+    try { 
+      app.ticker.remove(tick)
+    } catch {}
+    try { spinManager.dispose() } catch {}
     try { (effects as any).cleanup?.() } catch {}
     try { adv.cleanup() } catch {}
     try { prevCleanup?.() } catch {}
