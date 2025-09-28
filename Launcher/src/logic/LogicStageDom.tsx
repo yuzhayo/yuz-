@@ -2,6 +2,7 @@ import React from "react";
 import type { ClockHand, ClockHandSelection, LogicConfig, LayerConfig } from "./sceneTypes";
 import cfgJson from "../LogicConfig";
 import { clamp, clamp01, clampRpm60, toRad } from "./LogicMath";
+import { projectToRectBorder } from "./LayerOrbit";
 import { logicZIndexFor } from "./LogicLoaderBasic";
 
 type ImgItem = {
@@ -63,44 +64,6 @@ function urlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): string 
   return cfg.imageRegistry[ref.id] ?? null;
 }
 
-function projectToRectBorder(
-  cx: number,
-  cy: number,
-  x: number,
-  y: number,
-  w: number,
-  h: number,
-): { x: number; y: number } {
-  if (x >= 0 && x <= w && y >= 0 && y <= h) return { x, y };
-  const dx = x - cx;
-  const dy = y - cy;
-  if (dx === 0 && dy === 0) return { x: cx, y: cy };
-  const eps = 1e-6;
-  const cand: { t: number; x: number; y: number }[] = [];
-  if (Math.abs(dx) > eps) {
-    const t1 = (0 - cx) / dx;
-    const y1 = cy + t1 * dy;
-    if (t1 > 0 && y1 >= -1 && y1 <= h + 1) cand.push({ t: t1, x: 0, y: y1 });
-    const t2 = (w - cx) / dx;
-    const y2 = cy + t2 * dy;
-    if (t2 > 0 && y2 >= -1 && y2 <= h + 1) cand.push({ t: t2, x: w, y: y2 });
-  }
-  if (Math.abs(dy) > eps) {
-    const t3 = (0 - cy) / dy;
-    const x3 = cx + t3 * dx;
-    if (t3 > 0 && x3 >= -1 && x3 <= w + 1) cand.push({ t: t3, x: x3, y: 0 });
-    const t4 = (h - cy) / dy;
-    const x4 = cx + t4 * dx;
-    if (t4 > 0 && x4 >= -1 && x4 <= w + 1) cand.push({ t: t4, x: x4, y: h });
-  }
-  if (cand.length === 0) return { x: clamp(x, 0, w), y: clamp(y, 0, h) };
-  cand.sort((a, b) => a.t - b.t);
-  const first = cand[0];
-  if (!first) {
-    return { x: clamp(x, 0, w), y: clamp(y, 0, h) };
-  }
-  return { x: first.x, y: first.y };
-}
 
 export default function LogicStageDom() {
   const rootRef = React.useRef<HTMLDivElement | null>(null);

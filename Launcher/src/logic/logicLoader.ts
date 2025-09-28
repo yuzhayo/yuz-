@@ -4,7 +4,7 @@ import type { LogicConfig, LayerConfig } from "./sceneTypes";
 import { logicApplyBasicTransform, logicZIndexFor } from "./LogicLoaderBasic";
 import { createLayerSpinManager } from "./LayerSpin";
 import { createLayerClockManager } from "./LayerClock";
-import { buildOrbit } from "./LogicLoaderOrbit";
+import { createLayerOrbitManager } from "./LayerOrbit";
 import { buildEffects } from "./LogicLoaderEffects";
 import { buildEffectsAdvanced } from "./LogicLoaderEffectsAdvanced";
 
@@ -118,8 +118,9 @@ export async function buildSceneFromLogic(
     spinRpmBySprite.set(b.sprite, spinManager.getSpinRpm(b.sprite));
   }
 
-  // Orbit runtime: build items and helpers
-  const orbit = buildOrbit(app, built, spinRpmBySprite);
+  // Orbit runtime: create orbit manager
+  const orbitManager = createLayerOrbitManager();
+  orbitManager.init(app, built, spinRpmBySprite);
   // Effects (Phase 1: property effects only)
   const effects = buildEffects(app, built);
   const adv = buildEffectsAdvanced(app, built);
@@ -129,7 +130,7 @@ export async function buildSceneFromLogic(
     for (const b of built) logicApplyBasicTransform(app, b.sprite, b.cfg);
     spinManager.recompute();
     clockManager.recompute();
-    orbit.recompute(elapsed);
+    orbitManager.recompute(elapsed);
   };
   const resizeListener = () => onResize();
   window.addEventListener("resize", resizeListener);
@@ -139,7 +140,7 @@ export async function buildSceneFromLogic(
     const clockItems = clockManager.getItems();
     if (
       spinItems.length === 0 &&
-      orbit.items.length === 0 &&
+      orbitManager.getItems().length === 0 &&
       clockItems.length === 0 &&
       effects.items.length === 0 &&
       adv.items.length === 0
@@ -150,7 +151,7 @@ export async function buildSceneFromLogic(
     // Basic Spin (handles only basic RPM-based spins)
     spinManager.tick(elapsed);
     // Orbit
-    orbit.tick(elapsed);
+    orbitManager.tick(elapsed);
     // Clock (handles clock-driven spins and orbital motion)
     clockManager.tick();
     // Effects
@@ -166,7 +167,7 @@ export async function buildSceneFromLogic(
       const clockItems = clockManager.getItems();
       return (
         spinItems.length > 0 ||
-        orbit.items.length > 0 ||
+        orbitManager.getItems().length > 0 ||
         clockItems.length > 0 ||
         effects.items.length > 0 ||
         adv.items.length > 0
@@ -201,6 +202,9 @@ export async function buildSceneFromLogic(
     } catch {}
     try {
       (effects as any).cleanup?.();
+    } catch {}
+    try {
+      orbitManager.dispose();
     } catch {}
     try {
       adv.cleanup();
