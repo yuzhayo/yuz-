@@ -120,19 +120,19 @@ type Aura = {
 };
 
 // Distort state
-type Distort = { 
-  ampPx: number; 
-  speed: number; 
-  baseX: number; 
-  baseY: number; 
+type Distort = {
+  ampPx: number;
+  speed: number;
+  baseX: number;
+  baseY: number;
 };
 
 // Shockwave state
-type Shock = { 
-  period: number; 
-  maxScale: number; 
-  fade: boolean; 
-  baseScale: number; 
+type Shock = {
+  period: number;
+  maxScale: number;
+  fade: boolean;
+  baseScale: number;
 };
 
 // Unified effect item
@@ -232,7 +232,10 @@ function normShockwave(e: any): ShockwaveSpec {
 }
 
 // Parse effects from layer config
-function parseEffects(cfg: { effects?: any }): { basic: BasicEffectSpec[]; advanced: AdvancedEffectSpec[] } {
+function parseEffects(cfg: { effects?: any }): {
+  basic: BasicEffectSpec[];
+  advanced: AdvancedEffectSpec[];
+} {
   const list = cfg.effects;
   if (!Array.isArray(list) || list.length === 0) {
     return { basic: [], advanced: [] };
@@ -243,7 +246,7 @@ function parseEffects(cfg: { effects?: any }): { basic: BasicEffectSpec[]; advan
 
   for (const e of list) {
     if (!e || typeof e !== "object") continue;
-    
+
     const type = (e as any).type;
     if (type === "fade") basic.push(normFade(e));
     else if (type === "pulse") basic.push(normPulse(e));
@@ -281,7 +284,7 @@ export function computeBasicEffectState(
   effects: BasicEffectSpec[],
   tilt: { prevTiltRad?: number },
   elapsed: number,
-  pointer: { px: number; py: number }
+  pointer: { px: number; py: number },
 ): { alpha: number; scaleMul: number; tiltRad: number } {
   let alpha = 1;
   let scaleMul = 1;
@@ -336,7 +339,7 @@ export function computeBasicEffectState(
 export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEffectManager {
   let _app: GenericApplication | null = null;
   const items: LayerEffectItem[] = [];
-  
+
   // Pointer state for tilt effects (0..1)
   let px = 0.5;
   let py = 0.5;
@@ -413,12 +416,14 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
         // Initialize advanced effects if enabled and handler is available
         if (advancedEffectsEnabled && effectHandler && effects.advanced.length > 0) {
           for (const spec of effects.advanced) {
-            if ((spec.type === "glow" || spec.type === "bloom")) {
+            if (spec.type === "glow" || spec.type === "bloom") {
               const auraSprite = effectHandler.createAuraSprite(b.sprite, spec);
               if (auraSprite) {
                 item.auras.push({
                   sprite: auraSprite,
-                  baseScale: baseScale * (spec.type === "glow" ? (1 + spec.scale) : (1 + 0.2 + spec.strength * 0.2)),
+                  baseScale:
+                    baseScale *
+                    (spec.type === "glow" ? 1 + spec.scale : 1 + 0.2 + spec.strength * 0.2),
                   strength: spec.type === "glow" ? 1 : spec.strength,
                   pulseMs: spec.type === "glow" ? spec.pulseMs : undefined,
                   color: spec.type === "glow" ? spec.color : undefined,
@@ -462,13 +467,17 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
           item.basicSpecs,
           { prevTiltRad: item.prevTiltRad },
           elapsed,
-          { px, py }
+          { px, py },
         );
 
         // Apply basic effects
         b.sprite.alpha = Math.max(0, Math.min(1, alpha));
         const finalScale = item.baseScale * scaleMul;
-        if (typeof b.sprite.scale === 'object' && 'set' in b.sprite.scale && typeof b.sprite.scale.set === 'function') {
+        if (
+          typeof b.sprite.scale === "object" &&
+          "set" in b.sprite.scale &&
+          typeof b.sprite.scale.set === "function"
+        ) {
           b.sprite.scale.set(finalScale, finalScale);
         } else {
           b.sprite.scale.x = finalScale;
@@ -492,7 +501,11 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
             const T = a.pulseMs / 1000;
             if (T > 0) s = a.baseScale * (1 + 0.05 * Math.sin(((2 * Math.PI) / T) * elapsed));
           }
-          if (typeof a.sprite.scale === 'object' && 'set' in a.sprite.scale && typeof a.sprite.scale.set === 'function') {
+          if (
+            typeof a.sprite.scale === "object" &&
+            "set" in a.sprite.scale &&
+            typeof a.sprite.scale.set === "function"
+          ) {
             a.sprite.scale.set(s, s);
           } else {
             a.sprite.scale.x = s;
@@ -515,7 +528,11 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
             const phase = (elapsed % T) / T;
             const mul = 1 + (item.shock.maxScale - 1) * Math.sin(Math.PI * phase);
             const s = item.shock.baseScale * mul;
-            if (typeof b.sprite.scale === 'object' && 'set' in b.sprite.scale && typeof b.sprite.scale.set === 'function') {
+            if (
+              typeof b.sprite.scale === "object" &&
+              "set" in b.sprite.scale &&
+              typeof b.sprite.scale.set === "function"
+            ) {
               b.sprite.scale.set(s, s);
             } else {
               b.sprite.scale.x = s;

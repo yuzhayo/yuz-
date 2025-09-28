@@ -118,7 +118,7 @@ export function getSpriteDimensions(sp: GenericSprite): { width: number; height:
   const spriteAny = sp as any;
   let width: number;
   let height: number;
-  
+
   // Pixi.js sprite with texture
   if (spriteAny.texture) {
     const tex = spriteAny.texture;
@@ -135,7 +135,7 @@ export function getSpriteDimensions(sp: GenericSprite): { width: number; height:
     width = spriteAny.width || 0;
     height = spriteAny.height || 0;
   }
-  
+
   if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return null;
   return { width, height };
 }

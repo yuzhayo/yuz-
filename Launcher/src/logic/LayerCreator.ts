@@ -40,7 +40,7 @@ export type LayerConfig = {
   // Spin properties
   spinRPM?: number | null;
   spinDir?: "cw" | "ccw";
-  // Orbit properties  
+  // Orbit properties
   orbitRPM?: number | null;
   orbitDir?: "cw" | "ccw";
   orbitCenter?: { xPct: number; yPct: number };
@@ -114,8 +114,8 @@ function clampRpm60(v: unknown): number {
 // WebGL availability check utility
 export function isWebGLAvailable(): boolean {
   try {
-    const canvas = document.createElement('canvas');
-    const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+    const canvas = document.createElement("canvas");
+    const gl = canvas.getContext("webgl") || canvas.getContext("experimental-webgl");
     return !!gl;
   } catch {
     return false;
@@ -139,7 +139,7 @@ function logicApplyBasicTransform(app: GenericApplication, sp: GenericSprite, cf
   sp.x = (xPct / 100) * w;
   sp.y = (yPct / 100) * h;
   const s = (cfg.scale?.pct ?? 100) / 100;
-  if (typeof sp.scale === 'object' && 'set' in sp.scale && typeof sp.scale.set === 'function') {
+  if (typeof sp.scale === "object" && "set" in sp.scale && typeof sp.scale.set === "function") {
     sp.scale.set(s, s);
   } else {
     sp.scale.x = s;
@@ -170,7 +170,11 @@ export type LayerCreatorManagersState = {
 
 // Engine-agnostic manager interface for LayerCreator
 export interface LayerCreatorManager {
-  init(app: GenericApplication, cfg: LogicConfig, effectHandler?: EffectHandler): Promise<BuildResult>;
+  init(
+    app: GenericApplication,
+    cfg: LogicConfig,
+    effectHandler?: EffectHandler,
+  ): Promise<BuildResult>;
   tick(elapsed: number): void;
   recompute(): void;
   dispose(): void;
@@ -201,10 +205,16 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
   let _managersState: LayerCreatorManagersState | null = null;
 
   const manager = {
-    async init(app: GenericApplication, cfg: LogicConfig, effectHandler?: EffectHandler): Promise<BuildResult> {
+    async init(
+      app: GenericApplication,
+      cfg: LogicConfig,
+      effectHandler?: EffectHandler,
+    ): Promise<BuildResult> {
       _app = app;
-      _container = spriteFactory ? spriteFactory.createContainer() : ({ addChild: () => {}, children: [] } as GenericContainer);
-      if (_container && typeof (_container as any).sortableChildren !== 'undefined') {
+      _container = spriteFactory
+        ? spriteFactory.createContainer()
+        : ({ addChild: () => {}, children: [] } as GenericContainer);
+      if (_container && typeof (_container as any).sortableChildren !== "undefined") {
         (_container as any).sortableChildren = true;
       }
       _layers = [];
@@ -268,21 +278,21 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
             console.warn("[logic] No sprite factory provided, skipping layer", layer.id);
             continue;
           }
-          
+
           const sprite = await spriteFactory.createSprite(url);
-          
+
           // Set anchor if supported (Pixi-specific)
-          if (typeof (sprite as any).anchor?.set === 'function') {
+          if (typeof (sprite as any).anchor?.set === "function") {
             (sprite as any).anchor.set(0.5);
           }
-          
+
           logicApplyBasicTransform(app, sprite, layer);
-          
+
           // Add to container if it supports addChild
-          if (_container && typeof _container.addChild === 'function') {
+          if (_container && typeof _container.addChild === "function") {
             _container.addChild(sprite);
           }
-          
+
           built.push({ id: layer.id, sprite, cfg: layer });
         } catch (e) {
           console.error("[logic] Failed to load", url, "for layer", layer.id, e);
@@ -345,10 +355,10 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
           !effectManager.hasEffects()
         )
           return;
-        
+
         const dt = ((app as any).ticker?.deltaMS || 16.667) / 1000;
         _managersState.elapsed += dt;
-        
+
         // Basic Spin (handles only basic RPM-based spins)
         spinManager.tick(_managersState.elapsed);
         // Orbit
@@ -390,11 +400,11 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 
     recompute(): void {
       if (!_app || !_managersState) return;
-      
+
       for (const b of _layers) {
         logicApplyBasicTransform(_app, b.sprite, b.cfg);
       }
-      
+
       _managersState.spinManager.recompute();
       _managersState.clockManager.recompute();
       _managersState.orbitManager.recompute(_managersState.elapsed);
@@ -409,25 +419,25 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
           window.removeEventListener("resize", _managersState.resizeListener);
         }
       } catch {}
-      
+
       try {
         if (_app && _managersState.tickFunction && (_app as any).ticker?.remove) {
           (_app as any).ticker.remove(_managersState.tickFunction);
         }
       } catch {}
-      
+
       try {
         _managersState.spinManager.dispose();
       } catch {}
-      
+
       try {
         _managersState.clockManager.dispose();
       } catch {}
-      
+
       try {
         _managersState.effectManager.dispose();
       } catch {}
-      
+
       try {
         _managersState.orbitManager.dispose();
       } catch {}
@@ -451,7 +461,7 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 
     hasAnimations(): boolean {
       if (!_managersState) return false;
-      
+
       try {
         const spinItems = _managersState.spinManager.getItems();
         const clockItems = _managersState.clockManager.getItems();
@@ -467,7 +477,7 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       }
     },
   };
-  
+
   return manager;
 }
 
@@ -477,14 +487,13 @@ export function createCreatorManager(): LayerCreatorManager {
 }
 
 // Export utilities for external access - these are the consolidated utilities from multiple files
-export { 
-  toRad, 
-  toDeg, 
-  clamp, 
-  clamp01, 
-  clampRpm60, 
-  normDeg, 
-  logicZIndexFor, 
-  logicApplyBasicTransform 
+export {
+  toRad,
+  toDeg,
+  clamp,
+  clamp01,
+  clampRpm60,
+  normDeg,
+  logicZIndexFor,
+  logicApplyBasicTransform,
 };
-

@@ -125,7 +125,11 @@ export type OrbitItem = {
 
 // Engine-agnostic orbit manager for orbital motion
 export interface LayerOrbitManager {
-  init(app: GenericApplication, built: BuiltLayer[], spinRpmBySprite?: Map<GenericSprite, number>): void;
+  init(
+    app: GenericApplication,
+    built: BuiltLayer[],
+    spinRpmBySprite?: Map<GenericSprite, number>,
+  ): void;
   tick(elapsed: number): void;
   recompute(elapsed: number): void;
   dispose(): void;
@@ -138,7 +142,11 @@ export function createLayerOrbitManager(): LayerOrbitManager {
   let _app: GenericApplication | null = null;
 
   return {
-    init(application: GenericApplication, built: BuiltLayer[], spinRpmBySprite?: Map<GenericSprite, number>) {
+    init(
+      application: GenericApplication,
+      built: BuiltLayer[],
+      spinRpmBySprite?: Map<GenericSprite, number>,
+    ) {
       _app = application;
       items.length = 0;
 
@@ -268,14 +276,7 @@ export function createOrbitManager(): LayerOrbitManager {
 }
 
 // Export utility functions that other modules need
-export {
-  projectToRectBorder,
-};
+export { projectToRectBorder };
 
 // Re-export math utilities for convenience (now internal functions)
-export {
-  calculateOrbitCenter,
-  calculateOrbitRadius,
-  calculateOrbitPhase,
-  clampOrbitCenter,
-};
+export { calculateOrbitCenter, calculateOrbitRadius, calculateOrbitPhase, clampOrbitCenter };
