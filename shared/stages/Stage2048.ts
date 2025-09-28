@@ -651,15 +651,25 @@ export function LogicStage(props?: LogicStageProps) {
           autoInjectCSS: true,
         });
 
-        // For now, just set up the basic stage without the scene logic
-        // The scene building logic has been moved to EnginePixi.ts
+        // Import the buildSceneFromLogic function and LogicConfig 
+        const { buildSceneFromLogic } = await import("../../Launcher/src/logic/EnginePixi");
+        const logicConfigModule = await import("../../Launcher/src/LogicConfig");
         
-        // TODO: Implement scene building directly here or import from EnginePixi
-        console.log("[LogicStage] Stage created, scene building temporarily disabled for consolidation");
-        
-        // For now, just create a simple cleanup function
+        // Build and add the scene using the proper workflow
+        const cfg = logicConfigModule.default as unknown as LogicConfig;
+        const scene = await buildSceneFromLogic(stage.app, cfg);
+        stage.app.stage.addChild(scene.container);
+
         cleanupScene = () => {
-          console.log("[LogicStage] Scene cleanup called");
+          try {
+            (scene.container as any)._cleanup?.();
+          } catch {}
+          try {
+            // Only call destroy if it exists (Pixi containers have destroy, but generic containers may not)
+            if (typeof (scene.container as any).destroy === 'function') {
+              (scene.container as any).destroy({ children: true });
+            }
+          } catch {}
         };
       } catch (e) {
         console.error("[LogicStage] Failed to build scene from logic config", e);
