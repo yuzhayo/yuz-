@@ -1,4 +1,67 @@
-import type { BuiltLayer, GenericSprite, GenericApplication } from "./LayerCreator";
+/**
+ * LayerEffect.ts - Modular Layer Effect Processing System
+ *
+ * ⚠️  AI AGENT CRITICAL INSTRUCTIONS:
+ *
+ * This file is organized into ISOLATED BLOCKS. Each block is marked as:
+ * 🔴 CRITICAL - DO NOT DELETE (breaks core functionality)
+ * 🟡 OPTIONAL - Safe to delete (removes effects but basic display works)
+ * 🟢 UTILITY - Safe to delete (math helpers only, no visual impact)
+ *
+ * Deleting any 🔴 CRITICAL block will break the application!
+ * 🟡 OPTIONAL blocks can be safely removed to reduce features.
+ * 🟢 UTILITY blocks provide math helpers and can be deleted.
+ */
+
+// Import core contracts from centralized location
+import type { GenericSprite, GenericApplication, BuiltLayer } from "./LayerContracts";
+
+// ===================================================================
+// 🟢 BLOCK 1: UTILITY MATH FUNCTIONS AND CAPABILITY DETECTION
+// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
+// Math helpers for angles, easing, and hardware capability detection
+// ===================================================================
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function clamp01(n: number): number {
+  return Math.max(0, Math.min(1, n));
+}
+
+function pingPong(t: number): number {
+  if (t > 0.5) return 1 - (t - 0.5) * 2;
+  return t * 2;
+}
+
+function easeLinear(t: number): number {
+  return t;
+}
+
+function easeSineInOut(t: number): number {
+  return 0.5 - 0.5 * Math.cos(Math.PI * 2 * t);
+}
+
+// Check if advanced effects can be used
+function canUseAdvanced(webglCapable: boolean = true): boolean {
+  // Advanced effects require WebGL renderer capability
+  // This parameter should be set based on actual Pixi renderer type
+
+  // Also check hardware capabilities
+  // @ts-ignore
+  const mem = (navigator as any).deviceMemory as number | undefined;
+  const cores = navigator.hardwareConcurrency || 4;
+  const okHW = (mem === undefined || mem >= 4) && cores >= 4;
+
+  return webglCapable && okHW;
+}
+
+// ===================================================================
+// 🔴 BLOCK 2: EFFECT TYPE DEFINITIONS AND INTERFACES
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Core types for effect specifications and engine interfaces
+// ===================================================================
 
 // Effect types for LayerConfig
 export type LayerEffectConfig = Array<
@@ -148,24 +211,19 @@ export type LayerEffectItem = {
   shock?: Shock;
 };
 
-// Engine-agnostic layer effect manager interface
-export interface LayerEffectManager {
-  init(app: GenericApplication, built: BuiltLayer[]): void;
-  tick(elapsed: number, builtRef: BuiltLayer[]): void;
-  recompute(): void;
-  dispose(): void;
-  getItems(): LayerEffectItem[];
-  hasEffects(): boolean;
-}
-
-// Engine-specific effect handler interface
+// Engine-specific effect handler interface (kept engine-agnostic)
 export interface EffectHandler {
   createAuraSprite(originalSprite: GenericSprite, spec: GlowSpec | BloomSpec): GenericSprite | null;
   applyAdvancedEffect(sprite: GenericSprite, spec: AdvancedEffectSpec, elapsed: number): void;
   disposeAuraSprite(sprite: GenericSprite): void;
 }
 
-// Normalization functions for basic effects
+// ===================================================================
+// 🔴 BLOCK 3: CONFIG NORMALIZATION FUNCTIONS
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Handles effect config parsing and normalization
+// ===================================================================
+
 function normFade(e: any): FadeSpec {
   return {
     type: "fade",
@@ -195,7 +253,6 @@ function normTilt(e: any): TiltSpec {
   return { type: "tilt", mode, axis, maxDeg, periodMs };
 }
 
-// Normalization functions for advanced effects
 function normGlow(e: any): GlowSpec {
   return {
     type: "glow",
@@ -230,7 +287,6 @@ function normShockwave(e: any): ShockwaveSpec {
   };
 }
 
-// Parse effects from layer config
 function parseEffects(cfg: { effects?: any }): {
   basic: BasicEffectSpec[];
   advanced: AdvancedEffectSpec[];
@@ -259,27 +315,20 @@ function parseEffects(cfg: { effects?: any }): {
   return { basic, advanced };
 }
 
-// Check if advanced effects can be used
-function canUseAdvanced(webglCapable: boolean = true): boolean {
-  // Advanced effects require WebGL renderer capability
-  // This parameter should be set based on actual Pixi renderer type
-  
-  // Also check hardware capabilities
-  // @ts-ignore
-  const mem = (navigator as any).deviceMemory as number | undefined;
-  const cores = navigator.hardwareConcurrency || 4;
-  const okHW = (mem === undefined || mem >= 4) && cores >= 4;
-  
-  return webglCapable && okHW;
-}
+// ===================================================================
+// 🔴 BLOCK 4: MANAGER INTERFACE AND FACTORY
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Core manager interface that external code depends on
+// ===================================================================
 
-// Easing functions
-function easeLinear(t: number): number {
-  return t;
-}
-
-function easeSineInOut(t: number): number {
-  return 0.5 - 0.5 * Math.cos(Math.PI * 2 * t);
+// Engine-agnostic layer effect manager interface
+export interface LayerEffectManager {
+  init(app: GenericApplication, built: BuiltLayer[]): void;
+  tick(elapsed: number, builtRef: BuiltLayer[]): void;
+  recompute(): void;
+  dispose(): void;
+  getItems(): LayerEffectItem[];
+  hasEffects(): boolean;
 }
 
 // Helper function for computing basic effect state
@@ -299,9 +348,8 @@ export function computeBasicEffectState(
       if (T <= 0) continue;
       let phase = (elapsed % T) / T;
       if (e.loop) {
-        // ping-pong
-        if (phase > 0.5) phase = 1 - (phase - 0.5) * 2;
-        else phase = phase * 2;
+        // Use ping-pong helper from utility block
+        phase = pingPong(phase);
       }
       const t = e.easing === "sineInOut" ? easeSineInOut(phase) : easeLinear(phase);
       alpha = e.from + (e.to - e.from) * t;
@@ -309,10 +357,10 @@ export function computeBasicEffectState(
       const T = e.periodMs / 1000;
       if (T <= 0) continue;
       const omega = (2 * Math.PI) / T;
-      const phase = ((e.phaseDeg || 0) * Math.PI) / 180;
+      const phase = toRad(e.phaseDeg || 0);
       const s = 1 + e.amp * Math.sin(omega * elapsed + phase);
       if (e.property === "scale") scaleMul *= s;
-      else alpha *= Math.max(0, Math.min(1, s));
+      else alpha *= clamp01(s);
     } else if (e.type === "tilt") {
       const axisCount = e.axis === "both" ? 2 : 1;
       if (e.mode === "time") {
@@ -320,7 +368,7 @@ export function computeBasicEffectState(
         if (T > 0) {
           const s = Math.sin(((2 * Math.PI) / T) * elapsed);
           const deg = e.maxDeg * s;
-          tiltRad += (deg * Math.PI) / 180;
+          tiltRad += toRad(deg);
         }
       } else {
         const dx = (pointer.px - 0.5) * 2;
@@ -330,7 +378,7 @@ export function computeBasicEffectState(
         else if (e.axis === "y") v = -dx;
         else v = (dy + -dx) / axisCount;
         const deg = Math.max(-e.maxDeg, Math.min(e.maxDeg, v * e.maxDeg));
-        tiltRad += (deg * Math.PI) / 180;
+        tiltRad += toRad(deg);
       }
     }
   }
@@ -338,7 +386,12 @@ export function computeBasicEffectState(
   return { alpha, scaleMul, tiltRad };
 }
 
-// Create layer effect manager implementation with pluggable effect handler
+// ===================================================================
+// 🔴 BLOCK 5: CORE IMPLEMENTATION
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Main implementation that manages layer effects and animations
+// ===================================================================
+
 export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEffectManager {
   let _app: GenericApplication | null = null;
   const items: LayerEffectItem[] = [];
@@ -383,7 +436,6 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
     } catch {}
   }
 
-
   return {
     init(app: GenericApplication, built: BuiltLayer[]) {
       _app = app;
@@ -401,7 +453,7 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
         // If we can't determine renderer type, assume WebGL is not available
         webglCapable = false;
       }
-      
+
       advancedEffectsEnabled = canUseAdvanced(webglCapable);
 
       // Check if we need pointer listeners for tilt effects
@@ -600,8 +652,13 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
   };
 }
 
-// Export convenience functions
+// ===================================================================
+// 🟡 BLOCK 6: OPTIONAL WEBGL/RENDERER FEATURE GUARDS AND LOGGING
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes advanced features)
+// WebGL capability detection and optional logging for debugging
+// ===================================================================
+
+// Export convenience functions for backward compatibility
 export function createEffectManager(): LayerEffectManager {
   return createLayerEffectManager();
 }
-

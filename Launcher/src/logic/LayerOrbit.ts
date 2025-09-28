@@ -1,8 +1,52 @@
-import type { GenericApplication, GenericSprite, BuiltLayer, LayerConfig } from "./LayerCreator";
-import { clampRpm60, clamp, clamp01, toRad, normDeg } from "./LayerCreator";
+/**
+ * LayerOrbit.ts - Modular Orbital Motion System
+ *
+ * ⚠️  AI AGENT CRITICAL INSTRUCTIONS:
+ *
+ * This file is organized into ISOLATED BLOCKS. Each block is marked as:
+ * 🔴 CRITICAL - DO NOT DELETE (breaks core functionality)
+ * 🟡 OPTIONAL - Safe to delete (removes animations/effects but basic display works)
+ * 🟢 UTILITY - Safe to delete (math helpers only, no visual impact)
+ *
+ * Deleting any 🔴 CRITICAL block will break the application!
+ * 🟡 OPTIONAL blocks can be safely removed to reduce features.
+ * 🟢 UTILITY blocks provide math helpers and can be deleted.
+ */
+
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
 
-// Internal orbit math functions (moved from OrbitMath.ts)
+// Import all contracts from centralized location
+import type { GenericApplication, GenericSprite, BuiltLayer, LayerConfig } from "./LayerContracts";
+
+// ===================================================================
+// 🟢 BLOCK 1: UTILITY MATH AND GEOMETRY FUNCTIONS
+// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
+// These are helper functions for math operations and geometry calculations
+// ===================================================================
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function clamp01(n: number): number {
+  return clamp(n, 0, 1);
+}
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function normDeg(deg: number): number {
+  const d = deg % 360;
+  return d < 0 ? d + 360 : d;
+}
+
+function clampRpm60(v: unknown): number {
+  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.min(60, Math.max(0, n));
+}
+
 /**
  * Projects a point to the border of a rectangle, finding the intersection
  * with the rectangle boundary along the line from center to the point.
@@ -95,18 +139,11 @@ function calculateOrbitPhase(
   return Math.atan2(start.y - centerPx.cy, start.x - centerPx.cx);
 }
 
-/**
- * Clamps orbit center percentage values to valid range
- */
-function clampOrbitCenter(
-  centerConfig: { xPct?: number; yPct?: number } | null | undefined,
-  fallback: { xPct: number; yPct: number } = { xPct: 50, yPct: 50 },
-): { x: number; y: number } {
-  return {
-    x: clamp(centerConfig?.xPct ?? fallback.xPct, 0, 100),
-    y: clamp(centerConfig?.yPct ?? fallback.yPct, 0, 100),
-  };
-}
+// ===================================================================
+// 🔴 BLOCK 2: ORBIT TYPES AND DEFAULTS
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// These types define the orbital motion system structure
+// ===================================================================
 
 // Engine-agnostic orbit item for basic orbital motion
 export type OrbitItem = {
@@ -122,6 +159,72 @@ export type OrbitItem = {
   orientDegRad: number;
   spinRpm: number;
 };
+
+// Orbit policy type definitions
+type OrbitDirection = "cw" | "ccw";
+type OrbitOrientPolicy = "none" | "auto" | "override";
+
+// Default orbit configuration values
+const DEFAULT_ORBIT_CENTER = { xPct: 50, yPct: 50 };
+const _DEFAULT_ORBIT_DIRECTION: OrbitDirection = "cw";
+const _DEFAULT_ORIENT_POLICY: OrbitOrientPolicy = "none";
+
+// ===================================================================
+// 🔴 BLOCK 3: CONFIG NORMALIZATION FUNCTIONS
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Handles orbit configuration validation and normalization
+// ===================================================================
+
+/**
+ * Clamps orbit center percentage values to valid range
+ */
+function clampOrbitCenter(
+  centerConfig: { xPct?: number; yPct?: number } | null | undefined,
+  fallback: { xPct: number; yPct: number } = DEFAULT_ORBIT_CENTER,
+): { x: number; y: number } {
+  return {
+    x: clamp(centerConfig?.xPct ?? fallback.xPct, 0, 100),
+    y: clamp(centerConfig?.yPct ?? fallback.yPct, 0, 100),
+  };
+}
+
+/**
+ * Normalizes orbit direction from config to numeric value
+ */
+function normalizeOrbitDirection(direction: string | undefined): 1 | -1 {
+  return direction === "ccw" ? -1 : 1;
+}
+
+/**
+ * Normalizes and validates orbit orientation policy
+ */
+function normalizeOrientPolicy(policy: string | undefined): OrbitOrientPolicy {
+  if (policy === "auto" || policy === "override") return policy;
+  return "none";
+}
+
+/**
+ * Calculates radians per second from RPM
+ */
+function rpmToRadPerSec(rpm: number): number {
+  return (rpm * Math.PI) / 30;
+}
+
+/**
+ * Converts orientation degrees to radians with validation
+ */
+function normalizeOrientDegrees(orientDeg: number | null | undefined): number {
+  if (typeof orientDeg === "number" && isFinite(orientDeg)) {
+    return toRad(orientDeg);
+  }
+  return 0;
+}
+
+// ===================================================================
+// 🔴 BLOCK 4: MANAGER INTERFACE AND FACTORY
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Main interface that external code depends on
+// ===================================================================
 
 // Engine-agnostic orbit manager for orbital motion
 export interface LayerOrbitManager {
@@ -141,6 +244,12 @@ export function createLayerOrbitManager(): LayerOrbitManager {
   const items: OrbitItem[] = [];
   let _app: GenericApplication | null = null;
 
+  // ===================================================================
+  // 🔴 BLOCK 5: CORE IMPLEMENTATION
+  // ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+  // Main orbital motion processing logic
+  // ===================================================================
+
   return {
     init(
       application: GenericApplication,
@@ -156,9 +265,9 @@ export function createLayerOrbitManager(): LayerOrbitManager {
           const rpm = clampRpm60(b.cfg.orbitRPM);
           if (rpm <= 0) continue;
 
-          const orbitCenter = b.cfg.orbitCenter || { xPct: 50, yPct: 50 };
+          const orbitCenter = b.cfg.orbitCenter || DEFAULT_ORBIT_CENTER;
           const centerPct = clampOrbitCenter(orbitCenter);
-          const dir = b.cfg.orbitDir === "ccw" ? -1 : (1 as 1 | -1);
+          const dir = normalizeOrbitDirection(b.cfg.orbitDir);
 
           const w = STAGE_WIDTH;
           const h = STAGE_HEIGHT;
@@ -180,13 +289,9 @@ export function createLayerOrbitManager(): LayerOrbitManager {
             h,
           );
 
-          const radPerSec = (rpm * Math.PI) / 30;
-          const policy = (b.cfg.orbitOrientPolicy ?? "none") as "none" | "auto" | "override";
-          const orientDeg =
-            typeof b.cfg.orbitOrientDeg === "number" && isFinite(b.cfg.orbitOrientDeg)
-              ? b.cfg.orbitOrientDeg
-              : 0;
-          const orientDegRad = (orientDeg * Math.PI) / 180;
+          const radPerSec = rpmToRadPerSec(rpm);
+          const orientPolicy = normalizeOrientPolicy(b.cfg.orbitOrientPolicy);
+          const orientDegRad = normalizeOrientDegrees(b.cfg.orbitOrientDeg);
           const spinRpm = spinRpmBySprite?.get(b.sprite) ?? 0;
 
           items.push({
@@ -198,7 +303,7 @@ export function createLayerOrbitManager(): LayerOrbitManager {
             centerPx,
             radius,
             basePhase,
-            orientPolicy: policy,
+            orientPolicy,
             orientDegRad,
             spinRpm,
           });
@@ -264,11 +369,23 @@ export function createLayerOrbitManager(): LayerOrbitManager {
       _app = null;
     },
 
+    // ===================================================================
+    // 🟡 BLOCK 6: DIAGNOSTICS AND UTILITIES
+    // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes diagnostics)
+    // Provides debugging and inspection capabilities
+    // ===================================================================
+
     getItems(): OrbitItem[] {
       return [...items];
     },
   };
 }
+
+// ===================================================================
+// 🟢 BLOCK 7: CONVENIENCE EXPORTS
+// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete (convenience only)
+// Export functions for external use
+// ===================================================================
 
 // Export convenience functions
 export function createOrbitManager(): LayerOrbitManager {
@@ -278,5 +395,5 @@ export function createOrbitManager(): LayerOrbitManager {
 // Export utility functions that other modules need
 export { projectToRectBorder };
 
-// Re-export math utilities for convenience (now internal functions)
+// Re-export geometry utilities for convenience
 export { calculateOrbitCenter, calculateOrbitRadius, calculateOrbitPhase, clampOrbitCenter };

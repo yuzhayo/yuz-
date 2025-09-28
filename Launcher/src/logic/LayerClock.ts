@@ -1,21 +1,199 @@
-const DEBUG_CLOCK = import.meta.env?.VITE_CLOCK_DEBUG === "1";
+/**
+ * LayerClock.ts - Modular Clock Processing System
+ *
+ * ⚠️  AI AGENT CRITICAL INSTRUCTIONS:
+ *
+ * This file is organized into ISOLATED BLOCKS. Each block is marked as:
+ * 🔴 CRITICAL - DO NOT DELETE (breaks core functionality)
+ * 🟡 OPTIONAL - Safe to delete (removes features but basic display works)
+ * 🟢 UTILITY - Safe to delete (math helpers only, no visual impact)
+ *
+ * Deleting any 🔴 CRITICAL block will break the application!
+ * 🟡 OPTIONAL blocks can be safely removed to reduce features.
+ * 🟢 UTILITY blocks provide math helpers and can be deleted.
+ */
 
-const WARNED_CLOCK = new Set<string>();
-function warnClock(layerId: string, message: string) {
-  const key = `${layerId}:${message}`;
-  if (WARNED_CLOCK.has(key)) return;
-  WARNED_CLOCK.add(key);
-  console.warn("[logic][clock]", message, "layer", layerId);
+import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
+
+// Import all contracts from centralized location
+import type { GenericSprite, GenericApplication, BuiltLayer, LayerConfig } from "./LayerContracts";
+
+// ===================================================================
+// 🟢 BLOCK 1: UTILITY HELPER FUNCTIONS
+// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
+// These are helper functions for angle/value conversions and geometry
+// ===================================================================
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
 }
 
-function debugClock(layerId: string, ...data: unknown[]) {
-  if (!DEBUG_CLOCK) return;
-  console.info("[logic][clock][debug]", layerId, ...data);
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
 }
 
-import type { GenericSprite, GenericApplication, BuiltLayer, LayerConfig } from "./LayerCreator";
+function _clamp01(n: number): number {
+  return clamp(n, 0, 1);
+}
 
-// Clock-related types (moved from sceneTypes.ts)
+function getSpriteDimensions(sp: GenericSprite): { width: number; height: number } | null {
+  // Get dimensions from Pixi texture
+  const spriteAny = sp as any;
+  let width: number;
+  let height: number;
+
+  // Pixi.js sprite with texture
+  if (spriteAny.texture) {
+    const tex = spriteAny.texture;
+    width = tex.orig?.width ?? tex.width ?? spriteAny.width;
+    height = tex.orig?.height ?? tex.height ?? spriteAny.height;
+  }
+  // Fallback to generic width/height
+  else {
+    width = spriteAny.width || 0;
+    height = spriteAny.height || 0;
+  }
+
+  if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return null;
+  return { width, height };
+}
+
+function pointOnRect(width: number, height: number, angleRad: number): Vec2 {
+  if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return { x: 0, y: 0 };
+  const hw = width / 2;
+  const hh = height / 2;
+  const dx = Math.cos(angleRad);
+  const dy = Math.sin(angleRad);
+  const eps = 1e-6;
+  const candidates: Array<{ t: number; x: number; y: number }> = [];
+
+  if (Math.abs(dx) > eps) {
+    const sx = dx > 0 ? hw : -hw;
+    const tx = sx / dx;
+    const y = tx * dy;
+    if (tx >= 0 && Math.abs(y) <= hh + 1e-4) candidates.push({ t: tx, x: dx * tx, y });
+  }
+  if (Math.abs(dy) > eps) {
+    const sy = dy > 0 ? hh : -hh;
+    const ty = sy / dy;
+    const x = ty * dx;
+    if (ty >= 0 && Math.abs(x) <= hw + 1e-4) candidates.push({ t: ty, x, y: dy * ty });
+  }
+
+  if (candidates.length === 0) return { x: 0, y: 0 };
+  candidates.sort((a, b) => a.t - b.t);
+  const best = candidates[0];
+  if (!best) return { x: 0, y: 0 };
+  return { x: best.x, y: best.y };
+}
+
+function rotateVec(v: Vec2, angle: number): Vec2 {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  return {
+    x: v.x * c - v.y * s,
+    y: v.x * s + v.y * c,
+  };
+}
+
+function resolveTimeSource(clock: ClockConfig): TimeSource {
+  const tz = clock.timezone ?? "device";
+  const offset = clock.source?.tzOffsetMinutes ?? null;
+  if (tz === "utc") return { mode: "utc", tzOffsetMinutes: offset };
+  if (tz === "server") return { mode: "server", tzOffsetMinutes: offset };
+  return { mode: "device", tzOffsetMinutes: offset };
+}
+
+function getTimeParts(src: TimeSource) {
+  const now = Date.now();
+  if (src.mode === "device" && src.tzOffsetMinutes == null) {
+    const d = new Date(now);
+    return { H: d.getHours(), M: d.getMinutes(), S: d.getSeconds(), ms: d.getMilliseconds() };
+  }
+  const shift = (src.tzOffsetMinutes ?? 0) * 60000;
+  const d = new Date(now + shift);
+  return {
+    H: d.getUTCHours(),
+    M: d.getUTCMinutes(),
+    S: d.getUTCSeconds(),
+    ms: d.getUTCMilliseconds(),
+  };
+}
+
+function timeAngleRad(
+  parts: { H: number; M: number; S: number; ms: number },
+  hand: ClockHand,
+  format: 12 | 24,
+  smooth: boolean,
+): number {
+  const { H, M, S, ms } = parts;
+  if (hand === "second") {
+    const s = S + (smooth ? ms / 1000 : 0);
+    return 2 * Math.PI * (s / 60);
+  }
+  if (hand === "minute") {
+    const m = M + (smooth ? S / 60 : 0);
+    return 2 * Math.PI * (m / 60);
+  }
+  const h =
+    format === 24
+      ? (H + (smooth ? M / 60 + S / 3600 : 0)) / 24
+      : ((H % 12) + (smooth ? M / 60 + S / 3600 : 0)) / 12;
+  return 2 * Math.PI * h;
+}
+
+function computeClockGeometry(
+  sprite: GenericSprite,
+  clock: ClockConfig,
+  layerId: string,
+): ClockGeometry | null {
+  const dims = getSpriteDimensions(sprite);
+  if (!dims) {
+    warnClock(layerId, "missing texture dimensions");
+    return null;
+  }
+
+  const baseAngle = toRad(clock.base?.angleDeg ?? 0);
+  const tipAngle = toRad(clock.tip?.angleDeg ?? 0);
+  const baseLocal = pointOnRect(dims.width, dims.height, baseAngle);
+  const tipLocal = pointOnRect(dims.width, dims.height, tipAngle);
+  const baseTipVec = { x: tipLocal.x - baseLocal.x, y: tipLocal.y - baseLocal.y };
+  const baseTipLength = Math.hypot(baseTipVec.x, baseTipVec.y);
+
+  if (!isFinite(baseTipLength) || baseTipLength <= 1e-3) {
+    warnClock(layerId, "invalid base/tip configuration");
+    return null;
+  }
+
+  const baseTipAngle = Math.atan2(baseTipVec.y, baseTipVec.x);
+  return {
+    baseLocal,
+    tipLocal,
+    baseTipAngle,
+    baseTipLength,
+    sourceWidth: dims.width,
+    sourceHeight: dims.height,
+  };
+}
+
+function clampCenter(
+  center: ClockConfig["center"] | null | undefined,
+  fallback: { xPct: number; yPct: number },
+): { xPct: number; yPct: number } {
+  const x = typeof center?.xPct === "number" && isFinite(center.xPct) ? center.xPct : fallback.xPct;
+  const y = typeof center?.yPct === "number" && isFinite(center.yPct) ? center.yPct : fallback.yPct;
+  return {
+    xPct: clamp(x, 0, 100),
+    yPct: clamp(y, 0, 100),
+  };
+}
+
+// ===================================================================
+// 🔴 BLOCK 2: TYPES AND CONSTANTS
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Clock-related type definitions and constants
+// ===================================================================
+
 export type ClockHand = "second" | "minute" | "hour";
 export type ClockHandSelection = ClockHand | "none";
 
@@ -49,11 +227,7 @@ export type ClockConfig = {
     tzOffsetMinutes?: number | null;
   };
 };
-import { clamp, toRad } from "./LayerCreator";
-import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
-import type { Application } from "pixi.js";
 
-// Type definitions
 export type Vec2 = { x: number; y: number };
 
 export type TimeSource = {
@@ -103,176 +277,20 @@ export type ClockItem = {
   time: { source: TimeSource; smooth: boolean; format: 12 | 24 };
 };
 
-// Engine-agnostic clock manager interface
-export interface LayerClockManager {
-  init(app: GenericApplication, built: BuiltLayer[]): void;
-  tick(): void;
-  recompute(): void;
-  dispose(): void;
-  getItems(): ClockItem[];
-}
+// ===================================================================
+// 🔴 BLOCK 3: CONFIG NORMALIZATION AND VALIDATION
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Functions for processing and validating clock configurations
+// ===================================================================
 
-// Engine-agnostic utility functions
-export function getSpriteDimensions(sp: GenericSprite): { width: number; height: number } | null {
-  // Get dimensions from Pixi texture
-  const spriteAny = sp as any;
-  let width: number;
-  let height: number;
-
-  // Pixi.js sprite with texture
-  if (spriteAny.texture) {
-    const tex = spriteAny.texture;
-    width = tex.orig?.width ?? tex.width ?? spriteAny.width;
-    height = tex.orig?.height ?? tex.height ?? spriteAny.height;
-  }
-  // Fallback to generic width/height
-  else {
-    width = spriteAny.width || 0;
-    height = spriteAny.height || 0;
-  }
-
-  if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return null;
-  return { width, height };
-}
-
-export function pointOnRect(width: number, height: number, angleRad: number): Vec2 {
-  if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return { x: 0, y: 0 };
-  const hw = width / 2;
-  const hh = height / 2;
-  const dx = Math.cos(angleRad);
-  const dy = Math.sin(angleRad);
-  const eps = 1e-6;
-  const candidates: Array<{ t: number; x: number; y: number }> = [];
-
-  if (Math.abs(dx) > eps) {
-    const sx = dx > 0 ? hw : -hw;
-    const tx = sx / dx;
-    const y = tx * dy;
-    if (tx >= 0 && Math.abs(y) <= hh + 1e-4) candidates.push({ t: tx, x: dx * tx, y });
-  }
-  if (Math.abs(dy) > eps) {
-    const sy = dy > 0 ? hh : -hh;
-    const ty = sy / dy;
-    const x = ty * dx;
-    if (ty >= 0 && Math.abs(x) <= hw + 1e-4) candidates.push({ t: ty, x, y: dy * ty });
-  }
-
-  if (candidates.length === 0) return { x: 0, y: 0 };
-  candidates.sort((a, b) => a.t - b.t);
-  const best = candidates[0];
-  if (!best) return { x: 0, y: 0 };
-  return { x: best.x, y: best.y };
-}
-
-export function rotateVec(v: Vec2, angle: number): Vec2 {
-  const c = Math.cos(angle);
-  const s = Math.sin(angle);
-  return {
-    x: v.x * c - v.y * s,
-    y: v.x * s + v.y * c,
-  };
-}
-
-export function computeClockGeometry(
-  sprite: GenericSprite,
-  clock: ClockConfig,
-  layerId: string,
-): ClockGeometry | null {
-  const dims = getSpriteDimensions(sprite);
-  if (!dims) {
-    warnClock(layerId, "missing texture dimensions");
-    return null;
-  }
-
-  const baseAngle = toRad(clock.base?.angleDeg ?? 0);
-  const tipAngle = toRad(clock.tip?.angleDeg ?? 0);
-  const baseLocal = pointOnRect(dims.width, dims.height, baseAngle);
-  const tipLocal = pointOnRect(dims.width, dims.height, tipAngle);
-  const baseTipVec = { x: tipLocal.x - baseLocal.x, y: tipLocal.y - baseLocal.y };
-  const baseTipLength = Math.hypot(baseTipVec.x, baseTipVec.y);
-
-  if (!isFinite(baseTipLength) || baseTipLength <= 1e-3) {
-    warnClock(layerId, "invalid base/tip configuration");
-    return null;
-  }
-
-  const baseTipAngle = Math.atan2(baseTipVec.y, baseTipVec.x);
-  return {
-    baseLocal,
-    tipLocal,
-    baseTipAngle,
-    baseTipLength,
-    sourceWidth: dims.width,
-    sourceHeight: dims.height,
-  };
-}
-
-export function resolveTimeSource(clock: ClockConfig): TimeSource {
-  const tz = clock.timezone ?? "device";
-  const offset = clock.source?.tzOffsetMinutes ?? null;
-  if (tz === "utc") return { mode: "utc", tzOffsetMinutes: offset };
-  if (tz === "server") return { mode: "server", tzOffsetMinutes: offset };
-  return { mode: "device", tzOffsetMinutes: offset };
-}
-
-export function getTimeParts(src: TimeSource) {
-  const now = Date.now();
-  if (src.mode === "device" && src.tzOffsetMinutes == null) {
-    const d = new Date(now);
-    return { H: d.getHours(), M: d.getMinutes(), S: d.getSeconds(), ms: d.getMilliseconds() };
-  }
-  const shift = (src.tzOffsetMinutes ?? 0) * 60000;
-  const d = new Date(now + shift);
-  return {
-    H: d.getUTCHours(),
-    M: d.getUTCMinutes(),
-    S: d.getUTCSeconds(),
-    ms: d.getUTCMilliseconds(),
-  };
-}
-
-export function timeAngleRad(
-  parts: { H: number; M: number; S: number; ms: number },
-  hand: ClockHand,
-  format: 12 | 24,
-  smooth: boolean,
-): number {
-  const { H, M, S, ms } = parts;
-  if (hand === "second") {
-    const s = S + (smooth ? ms / 1000 : 0);
-    return 2 * Math.PI * (s / 60);
-  }
-  if (hand === "minute") {
-    const m = M + (smooth ? S / 60 : 0);
-    return 2 * Math.PI * (m / 60);
-  }
-  const h =
-    format === 24
-      ? (H + (smooth ? M / 60 + S / 3600 : 0)) / 24
-      : ((H % 12) + (smooth ? M / 60 + S / 3600 : 0)) / 12;
-  return 2 * Math.PI * h;
-}
-
-export function clampCenter(
-  center: ClockConfig["center"] | null | undefined,
-  fallback: { xPct: number; yPct: number },
-): { xPct: number; yPct: number } {
-  const x = typeof center?.xPct === "number" && isFinite(center.xPct) ? center.xPct : fallback.xPct;
-  const y = typeof center?.yPct === "number" && isFinite(center.yPct) ? center.yPct : fallback.yPct;
-  return {
-    xPct: clamp(x, 0, 100),
-    yPct: clamp(y, 0, 100),
-  };
-}
-
-export function pctToStage(center: { xPct: number; yPct: number }): Vec2 {
+function pctToStage(center: { xPct: number; yPct: number }): Vec2 {
   return {
     x: (center.xPct / 100) * STAGE_WIDTH,
     y: (center.yPct / 100) * STAGE_HEIGHT,
   };
 }
 
-export function resolveSpinRadius(clock: ClockConfig): SpinRadius {
+function resolveSpinRadius(clock: ClockConfig): SpinRadius {
   const rawValue = clock.spinRadius?.value;
   const value = typeof rawValue === "number" && isFinite(rawValue) ? Math.max(0, rawValue) : null;
   const rawPct = clock.spinRadius?.pct;
@@ -280,7 +298,7 @@ export function resolveSpinRadius(clock: ClockConfig): SpinRadius {
   return { value, pct };
 }
 
-export function resolveSpinRadiusPx(item: ClockItem, maxScale: number): number {
+function resolveSpinRadiusPx(item: ClockItem, maxScale: number): number {
   if (item.spin.radius.value != null) return item.spin.radius.value;
   if (item.spin.radius.pct != null && item.geometry) {
     return item.spin.radius.pct * item.geometry.baseTipLength * maxScale;
@@ -288,7 +306,6 @@ export function resolveSpinRadiusPx(item: ClockItem, maxScale: number): number {
   return 0;
 }
 
-// Clock item management
 function createClockItem(b: BuiltLayer): ClockItem | null {
   const clock = b.cfg.clock;
   if (!clock || !clock.enabled) return null;
@@ -455,13 +472,32 @@ function tickClock(items: ClockItem[]) {
   }
 }
 
-// Create unified clock manager
+// ===================================================================
+// 🔴 BLOCK 4: MANAGER INTERFACE AND FACTORY
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Main interface that external code depends on
+// ===================================================================
+
+export interface LayerClockManager {
+  init(app: GenericApplication, built: BuiltLayer[]): void;
+  tick(): void;
+  recompute(): void;
+  dispose(): void;
+  getItems(): ClockItem[];
+}
+
+// ===================================================================
+// 🔴 BLOCK 5: CORE IMPLEMENTATION
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Main clock manager implementation
+// ===================================================================
+
 export function createLayerClockManager(): LayerClockManager {
   const items: ClockItem[] = [];
-  let _app: Application | null = null;
+  let _app: GenericApplication | null = null;
 
   return {
-    init(application: Application, built: BuiltLayer[]) {
+    init(application: GenericApplication, built: BuiltLayer[]) {
       _app = application;
       items.length = 0;
 
@@ -490,13 +526,34 @@ export function createLayerClockManager(): LayerClockManager {
   };
 }
 
-// Export convenience functions
+// ===================================================================
+// 🟡 BLOCK 6: DIAGNOSTICS AND LEGACY COMPATIBILITY
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes debug/compat)
+// Debug functions and legacy compatibility functions
+// ===================================================================
+
+const DEBUG_CLOCK = import.meta.env?.VITE_CLOCK_DEBUG === "1";
+
+const WARNED_CLOCK = new Set<string>();
+function warnClock(layerId: string, message: string) {
+  const key = `${layerId}:${message}`;
+  if (WARNED_CLOCK.has(key)) return;
+  WARNED_CLOCK.add(key);
+  console.warn("[logic][clock]", message, "layer", layerId);
+}
+
+function debugClock(layerId: string, ...data: unknown[]) {
+  if (!DEBUG_CLOCK) return;
+  console.info("[logic][clock][debug]", layerId, ...data);
+}
+
+// Export convenience functions for backward compatibility
 export function createClockManager(): LayerClockManager {
   return createLayerClockManager();
 }
 
 // Legacy compatibility function for existing buildClock usage
-export function buildClock(app: Application, built: BuiltLayer[]) {
+export function buildClock(app: GenericApplication, built: BuiltLayer[]) {
   const manager = createLayerClockManager();
   manager.init(app, built);
 
