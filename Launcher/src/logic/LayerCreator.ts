@@ -9,8 +9,8 @@ import { createLayerClockManager } from "./LayerClock";
 import type { LayerClockManager } from "./LayerClock";
 import { createLayerOrbitManager } from "./LayerOrbit";
 import type { LayerOrbitManager } from "./LayerOrbit";
-import { buildEffects } from "./LogicLoaderEffects";
-import { buildEffectsAdvanced } from "./LogicLoaderEffectsAdvanced";
+import { createLayerEffectManager } from "./LayerEffect";
+import type { LayerEffectManager } from "./LayerEffect";
 
 // Type definitions for LayerCreator module
 export type LayerCreatorItem = {
@@ -23,8 +23,7 @@ export type LayerCreatorManagersState = {
   spinManager: LayerSpinManager;
   clockManager: LayerClockManager;
   orbitManager: LayerOrbitManager;
-  effects: any;
-  advancedEffects: any;
+  effectManager: LayerEffectManager;
   elapsed: number;
   resizeListener?: () => void;
   tickFunction?: () => void;
@@ -55,7 +54,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
   let _layers: BuiltLayer[] = [];
   let _managersState: LayerCreatorManagersState | null = null;
 
-  return {
+  const manager = {
     async init(app: Application, cfg: LogicConfig): Promise<BuildResult> {
       _app = app;
       _container = new Container();
@@ -151,17 +150,16 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       const orbitManager = createLayerOrbitManager();
       orbitManager.init(app, built, spinRpmBySprite);
 
-      // Effects (Phase 1: property effects only)
-      const effects = buildEffects(app, built);
-      const advancedEffects = buildEffectsAdvanced(app, built);
+      // Effects (unified system)
+      const effectManager = createLayerEffectManager();
+      effectManager.init(app, built);
 
       // Create managers state
       _managersState = {
         spinManager,
         clockManager,
         orbitManager,
-        effects,
-        advancedEffects,
+        effectManager,
         elapsed: 0,
       };
 
@@ -171,6 +169,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
         spinManager.recompute();
         clockManager.recompute();
         orbitManager.recompute(_managersState!.elapsed);
+        effectManager.recompute();
       };
       const resizeListener = () => onResize();
       window.addEventListener("resize", resizeListener);
@@ -186,8 +185,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
           spinItems.length === 0 &&
           orbitManager.getItems().length === 0 &&
           clockItems.length === 0 &&
-          effects.items.length === 0 &&
-          advancedEffects.items.length === 0
+          !effectManager.hasEffects()
         )
           return;
         
@@ -200,17 +198,15 @@ export function createLayerCreatorManager(): LayerCreatorManager {
         orbitManager.tick(_managersState.elapsed);
         // Clock (handles clock-driven spins and orbital motion)
         clockManager.tick();
-        // Effects
-        effects.tick(_managersState.elapsed, built);
-        // Advanced Effects (gated)
-        advancedEffects.tick(_managersState.elapsed, built);
+        // Effects (unified system)
+        effectManager.tick(_managersState.elapsed, built);
       };
 
       _managersState.tickFunction = tick;
 
       // Add ticker if we have animations
       try {
-        if (this.hasAnimations()) {
+        if (manager.hasAnimations()) {
           app.ticker.add(tick);
         }
       } catch (e) {
@@ -220,7 +216,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       // Set up cleanup on container
       const prevCleanup = (_container as any)._cleanup as (() => void) | undefined;
       (_container as any)._cleanup = () => {
-        this.dispose();
+        manager.dispose();
         try {
           prevCleanup?.();
         } catch {}
@@ -245,6 +241,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       _managersState.spinManager.recompute();
       _managersState.clockManager.recompute();
       _managersState.orbitManager.recompute(_managersState.elapsed);
+      _managersState.effectManager.recompute();
     },
 
     dispose(): void {
@@ -271,15 +268,11 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       } catch {}
       
       try {
-        (_managersState.effects as any).cleanup?.();
+        _managersState.effectManager.dispose();
       } catch {}
       
       try {
         _managersState.orbitManager.dispose();
-      } catch {}
-      
-      try {
-        _managersState.advancedEffects.cleanup();
       } catch {}
 
       _managersState = null;
@@ -309,8 +302,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
           spinItems.length > 0 ||
           _managersState.orbitManager.getItems().length > 0 ||
           clockItems.length > 0 ||
-          _managersState.effects.items.length > 0 ||
-          _managersState.advancedEffects.items.length > 0
+          _managersState.effectManager.hasEffects()
         );
       } catch (e) {
         console.warn("[LayerCreator] Error checking animations:", e);
@@ -318,6 +310,8 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       }
     },
   };
+  
+  return manager;
 }
 
 // Export convenience functions

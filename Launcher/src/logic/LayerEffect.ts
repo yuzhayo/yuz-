@@ -1,0 +1,525 @@
+import { Sprite } from "pixi.js";
+import type { Application } from "pixi.js";
+import type { BuiltLayer } from "./LogicTypes";
+import type { LayerConfig } from "./sceneTypes";
+import { isWebGLAvailable } from "./LogicCapability";
+
+// Basic effect type definitions
+type FadeSpec = {
+  type: "fade";
+  from: number;
+  to: number;
+  durationMs: number;
+  loop: boolean;
+  easing: "linear" | "sineInOut";
+};
+
+type PulseSpec = {
+  type: "pulse";
+  property: "scale" | "alpha";
+  amp: number;
+  periodMs: number;
+  phaseDeg: number;
+};
+
+type TiltSpec = {
+  type: "tilt";
+  mode: "pointer" | "device" | "time";
+  axis: "both" | "x" | "y";
+  maxDeg: number;
+  periodMs?: number;
+};
+
+type BasicEffectSpec = FadeSpec | PulseSpec | TiltSpec;
+
+// Advanced effect type definitions
+type GlowSpec = {
+  type: "glow";
+  color: number;
+  alpha: number;
+  scale: number;
+  pulseMs?: number;
+};
+
+type BloomSpec = {
+  type: "bloom";
+  strength: number;
+};
+
+type DistortSpec = {
+  type: "distort";
+  ampPx: number;
+  speed: number;
+};
+
+type ShockwaveSpec = {
+  type: "shockwave";
+  periodMs: number;
+  maxScale: number;
+  fade: boolean;
+};
+
+type AdvancedEffectSpec = GlowSpec | BloomSpec | DistortSpec | ShockwaveSpec;
+
+// Aura sprite for glow/bloom effects
+type Aura = {
+  sprite: Sprite;
+  baseScale: number;
+  strength: number;
+  pulseMs?: number;
+  color?: number;
+  alpha: number;
+};
+
+// Distort state
+type Distort = { 
+  ampPx: number; 
+  speed: number; 
+  baseX: number; 
+  baseY: number; 
+};
+
+// Shockwave state
+type Shock = { 
+  period: number; 
+  maxScale: number; 
+  fade: boolean; 
+  baseScale: number; 
+};
+
+// Unified effect item
+export type LayerEffectItem = {
+  spriteIdx: number;
+  basicSpecs: BasicEffectSpec[];
+  advancedSpecs: AdvancedEffectSpec[];
+  baseAlpha: number;
+  baseScale: number;
+  prevTiltRad?: number;
+  // Advanced effect state
+  auras: Aura[];
+  distort?: Distort;
+  shock?: Shock;
+};
+
+// Layer effect manager interface
+export interface LayerEffectManager {
+  init(app: Application, built: BuiltLayer[]): void;
+  tick(elapsed: number, builtRef: BuiltLayer[]): void;
+  recompute(): void;
+  dispose(): void;
+  getItems(): LayerEffectItem[];
+  hasEffects(): boolean;
+}
+
+// Normalization functions for basic effects
+function normFade(e: any): FadeSpec {
+  return {
+    type: "fade",
+    from: typeof e.from === "number" ? e.from : 1,
+    to: typeof e.to === "number" ? e.to : 1,
+    durationMs: typeof e.durationMs === "number" && e.durationMs > 0 ? e.durationMs : 1000,
+    loop: e.loop !== false,
+    easing: e.easing === "sineInOut" ? "sineInOut" : "linear",
+  };
+}
+
+function normPulse(e: any): PulseSpec {
+  return {
+    type: "pulse",
+    property: e.property === "alpha" ? "alpha" : "scale",
+    amp: typeof e.amp === "number" ? e.amp : e.property === "alpha" ? 0.1 : 0.05,
+    periodMs: typeof e.periodMs === "number" && e.periodMs > 0 ? e.periodMs : 1000,
+    phaseDeg: typeof e.phaseDeg === "number" ? e.phaseDeg : 0,
+  };
+}
+
+function normTilt(e: any): TiltSpec {
+  const mode: TiltSpec["mode"] = e.mode === "device" || e.mode === "time" ? e.mode : "pointer";
+  const axis: TiltSpec["axis"] = e.axis === "x" || e.axis === "y" ? e.axis : "both";
+  const maxDeg = typeof e.maxDeg === "number" ? e.maxDeg : 8;
+  const periodMs = typeof e.periodMs === "number" && e.periodMs > 0 ? e.periodMs : 4000;
+  return { type: "tilt", mode, axis, maxDeg, periodMs };
+}
+
+// Normalization functions for advanced effects
+function normGlow(e: any): GlowSpec {
+  return {
+    type: "glow",
+    color: typeof e.color === "number" ? e.color : 0xffff00,
+    alpha: typeof e.alpha === "number" ? e.alpha : 0.4,
+    scale: typeof e.scale === "number" ? e.scale : 0.15,
+    pulseMs: typeof e.pulseMs === "number" ? e.pulseMs : undefined,
+  };
+}
+
+function normBloom(e: any): BloomSpec {
+  return {
+    type: "bloom",
+    strength: typeof e.strength === "number" ? e.strength : 0.6,
+  };
+}
+
+function normDistort(e: any): DistortSpec {
+  return {
+    type: "distort",
+    ampPx: typeof e.ampPx === "number" ? e.ampPx : 2,
+    speed: typeof e.speed === "number" ? e.speed : 0.5,
+  };
+}
+
+function normShockwave(e: any): ShockwaveSpec {
+  return {
+    type: "shockwave",
+    periodMs: typeof e.periodMs === "number" ? e.periodMs : 1200,
+    maxScale: typeof e.maxScale === "number" ? e.maxScale : 1.3,
+    fade: e.fade !== false,
+  };
+}
+
+// Parse effects from layer config
+function parseEffects(cfg: LayerConfig): { basic: BasicEffectSpec[]; advanced: AdvancedEffectSpec[] } {
+  const list = cfg.effects;
+  if (!Array.isArray(list) || list.length === 0) {
+    return { basic: [], advanced: [] };
+  }
+
+  const basic: BasicEffectSpec[] = [];
+  const advanced: AdvancedEffectSpec[] = [];
+
+  for (const e of list) {
+    if (!e || typeof e !== "object") continue;
+    
+    const type = (e as any).type;
+    if (type === "fade") basic.push(normFade(e));
+    else if (type === "pulse") basic.push(normPulse(e));
+    else if (type === "tilt") basic.push(normTilt(e));
+    else if (type === "glow") advanced.push(normGlow(e));
+    else if (type === "bloom") advanced.push(normBloom(e));
+    else if (type === "distort") advanced.push(normDistort(e));
+    else if (type === "shockwave") advanced.push(normShockwave(e));
+  }
+
+  return { basic, advanced };
+}
+
+// Check if advanced effects can be used
+function canUseAdvanced(): boolean {
+  const okGL = isWebGLAvailable();
+  // @ts-ignore
+  const mem = (navigator as any).deviceMemory as number | undefined;
+  const cores = navigator.hardwareConcurrency || 4;
+  const okHW = (mem === undefined || mem >= 4) && cores >= 4;
+  return okGL && okHW;
+}
+
+// Easing functions
+function easeLinear(t: number): number {
+  return t;
+}
+
+function easeSineInOut(t: number): number {
+  return 0.5 - 0.5 * Math.cos(Math.PI * 2 * t);
+}
+
+// Helper function for computing basic effect state (for DOM stage reuse)
+export function computeBasicEffectState(
+  effects: BasicEffectSpec[],
+  tilt: { prevTiltRad?: number },
+  elapsed: number,
+  pointer: { px: number; py: number }
+): { alpha: number; scaleMul: number; tiltRad: number } {
+  let alpha = 1;
+  let scaleMul = 1;
+  let tiltRad = 0;
+
+  for (const e of effects) {
+    if (e.type === "fade") {
+      const T = e.durationMs / 1000;
+      if (T <= 0) continue;
+      let phase = (elapsed % T) / T;
+      if (e.loop) {
+        // ping-pong
+        if (phase > 0.5) phase = 1 - (phase - 0.5) * 2;
+        else phase = phase * 2;
+      }
+      const t = e.easing === "sineInOut" ? easeSineInOut(phase) : easeLinear(phase);
+      alpha = e.from + (e.to - e.from) * t;
+    } else if (e.type === "pulse") {
+      const T = e.periodMs / 1000;
+      if (T <= 0) continue;
+      const omega = (2 * Math.PI) / T;
+      const phase = ((e.phaseDeg || 0) * Math.PI) / 180;
+      const s = 1 + e.amp * Math.sin(omega * elapsed + phase);
+      if (e.property === "scale") scaleMul *= s;
+      else alpha *= Math.max(0, Math.min(1, s));
+    } else if (e.type === "tilt") {
+      const axisCount = e.axis === "both" ? 2 : 1;
+      if (e.mode === "time") {
+        const T = (e.periodMs ?? 4000) / 1000;
+        if (T > 0) {
+          const s = Math.sin(((2 * Math.PI) / T) * elapsed);
+          const deg = e.maxDeg * s;
+          tiltRad += (deg * Math.PI) / 180;
+        }
+      } else {
+        const dx = (pointer.px - 0.5) * 2;
+        const dy = (pointer.py - 0.5) * 2;
+        let v = 0;
+        if (e.axis === "x") v = dy;
+        else if (e.axis === "y") v = -dx;
+        else v = (dy + -dx) / axisCount;
+        const deg = Math.max(-e.maxDeg, Math.min(e.maxDeg, v * e.maxDeg));
+        tiltRad += (deg * Math.PI) / 180;
+      }
+    }
+  }
+
+  return { alpha, scaleMul, tiltRad };
+}
+
+// Create layer effect manager implementation
+export function createLayerEffectManager(): LayerEffectManager {
+  let _app: Application | null = null;
+  const items: LayerEffectItem[] = [];
+  
+  // Pointer state for tilt effects (0..1)
+  let px = 0.5;
+  let py = 0.5;
+  let hasPointerListeners = false;
+
+  const onMouse = (ev: MouseEvent) => {
+    const w = window.innerWidth || 1;
+    const h = window.innerHeight || 1;
+    px = Math.max(0, Math.min(1, ev.clientX / w));
+    py = Math.max(0, Math.min(1, ev.clientY / h));
+  };
+
+  const onTouch = (ev: TouchEvent) => {
+    const t = ev.touches && ev.touches[0];
+    if (!t) return;
+    const w = window.innerWidth || 1;
+    const h = window.innerHeight || 1;
+    px = Math.max(0, Math.min(1, t.clientX / w));
+    py = Math.max(0, Math.min(1, t.clientY / h));
+  };
+
+  function installPointerListeners() {
+    if (hasPointerListeners) return;
+    try {
+      window.addEventListener("mousemove", onMouse, { passive: true });
+      window.addEventListener("touchmove", onTouch, { passive: true });
+      hasPointerListeners = true;
+    } catch {}
+  }
+
+  function removePointerListeners() {
+    if (!hasPointerListeners) return;
+    try {
+      window.removeEventListener("mousemove", onMouse as any);
+      window.removeEventListener("touchmove", onTouch as any);
+      hasPointerListeners = false;
+    } catch {}
+  }
+
+  const advancedEffectsEnabled = canUseAdvanced();
+
+  return {
+    init(app: Application, built: BuiltLayer[]) {
+      _app = app;
+      items.length = 0;
+
+      // Check if we need pointer listeners for tilt effects
+      let needsPointerListeners = false;
+
+      built.forEach((b, idx) => {
+        const effects = parseEffects(b.cfg);
+        if (effects.basic.length === 0 && effects.advanced.length === 0) return;
+
+        // Check for tilt effects that need pointer tracking
+        for (const spec of effects.basic) {
+          if (spec.type === "tilt" && (spec.mode === "pointer" || spec.mode === "device")) {
+            needsPointerListeners = true;
+            break;
+          }
+        }
+
+        const baseScale = (b.cfg.scale?.pct ?? 100) / 100;
+        const baseAlpha = 1;
+
+        const item: LayerEffectItem = {
+          spriteIdx: idx,
+          basicSpecs: effects.basic,
+          advancedSpecs: advancedEffectsEnabled ? effects.advanced : [],
+          baseAlpha,
+          baseScale,
+          auras: [],
+        };
+
+        // Initialize advanced effects if enabled
+        if (advancedEffectsEnabled && effects.advanced.length > 0) {
+          for (const spec of effects.advanced) {
+            if (spec.type === "glow") {
+              const auraSprite = new Sprite(b.sprite.texture);
+              auraSprite.anchor.set(0.5);
+              auraSprite.tint = spec.color;
+              auraSprite.alpha = spec.alpha;
+              auraSprite.blendMode = 1; // BLEND_MODES.ADD
+              const parent = b.sprite.parent;
+              if (parent) {
+                const index = parent.getChildIndex(b.sprite);
+                parent.addChildAt(auraSprite, index);
+              }
+              item.auras.push({
+                sprite: auraSprite,
+                baseScale: baseScale * (1 + spec.scale),
+                strength: 1,
+                pulseMs: spec.pulseMs,
+                color: spec.color,
+                alpha: spec.alpha,
+              });
+            } else if (spec.type === "bloom") {
+              const auraSprite = new Sprite(b.sprite.texture);
+              auraSprite.anchor.set(0.5);
+              auraSprite.alpha = Math.min(1, 0.3 + spec.strength * 0.4);
+              auraSprite.blendMode = 1; // BLEND_MODES.ADD
+              const parent = b.sprite.parent;
+              if (parent) {
+                const index = parent.getChildIndex(b.sprite);
+                parent.addChildAt(auraSprite, index);
+              }
+              item.auras.push({
+                sprite: auraSprite,
+                baseScale: baseScale * (1 + 0.2 + spec.strength * 0.2),
+                strength: spec.strength,
+                alpha: auraSprite.alpha,
+              });
+            } else if (spec.type === "distort") {
+              item.distort = {
+                ampPx: spec.ampPx,
+                speed: spec.speed,
+                baseX: b.sprite.x,
+                baseY: b.sprite.y,
+              };
+            } else if (spec.type === "shockwave") {
+              item.shock = {
+                period: spec.periodMs,
+                maxScale: spec.maxScale,
+                fade: spec.fade,
+                baseScale,
+              };
+            }
+          }
+        }
+
+        items.push(item);
+      });
+
+      // Install pointer listeners only if needed
+      if (needsPointerListeners) {
+        installPointerListeners();
+      }
+    },
+
+    tick(elapsed: number, builtRef: BuiltLayer[]) {
+      for (const item of items) {
+        const b = builtRef[item.spriteIdx];
+        if (!b) continue;
+
+        // Process basic effects first
+        const { alpha, scaleMul, tiltRad } = computeBasicEffectState(
+          item.basicSpecs,
+          { prevTiltRad: item.prevTiltRad },
+          elapsed,
+          { px, py }
+        );
+
+        // Apply basic effects
+        b.sprite.alpha = Math.max(0, Math.min(1, alpha));
+        const finalScale = item.baseScale * scaleMul;
+        b.sprite.scale.set(finalScale, finalScale);
+
+        // Apply tilt rotation delta
+        const prev = item.prevTiltRad || 0;
+        if (tiltRad !== prev) {
+          b.sprite.rotation += tiltRad - prev;
+          item.prevTiltRad = tiltRad;
+        }
+
+        // Process advanced effects (aura sprites, distortion, shockwave)
+        for (const a of item.auras) {
+          a.sprite.x = b.sprite.x;
+          a.sprite.y = b.sprite.y;
+          a.sprite.rotation = b.sprite.rotation;
+          let s = a.baseScale;
+          if (a.pulseMs) {
+            const T = a.pulseMs / 1000;
+            if (T > 0) s = a.baseScale * (1 + 0.05 * Math.sin(((2 * Math.PI) / T) * elapsed));
+          }
+          a.sprite.scale.set(s, s);
+        }
+
+        // Apply distortion (additive position offset)
+        if (item.distort) {
+          const { ampPx, speed } = item.distort;
+          const t = elapsed * speed * 2 * Math.PI;
+          b.sprite.x += ampPx * Math.sin(t);
+          b.sprite.y += ampPx * Math.cos(t * 0.9);
+        }
+
+        // Apply shockwave (overrides scale and optionally alpha)
+        if (item.shock) {
+          const T = item.shock.period / 1000;
+          if (T > 0) {
+            const phase = (elapsed % T) / T;
+            const mul = 1 + (item.shock.maxScale - 1) * Math.sin(Math.PI * phase);
+            const s = item.shock.baseScale * mul;
+            b.sprite.scale.set(s, s); // Override scale from basic effects
+            if (item.shock.fade) {
+              b.sprite.alpha = 0.8 + 0.2 * Math.cos(Math.PI * phase); // Override alpha from basic effects
+            }
+          }
+        }
+      }
+    },
+
+    recompute() {
+      // Effects don't need recomputation for resize events
+      // All effects maintain their state and work with current sprite positions
+    },
+
+    dispose() {
+      // Remove pointer listeners
+      removePointerListeners();
+
+      // Clean up aura sprites
+      for (const item of items) {
+        for (const aura of item.auras) {
+          try {
+            aura.sprite.destroy();
+          } catch {
+            // Ignore destroy errors
+          }
+        }
+      }
+
+      items.length = 0;
+      _app = null;
+    },
+
+    getItems(): LayerEffectItem[] {
+      return [...items];
+    },
+
+    hasEffects(): boolean {
+      return items.length > 0;
+    },
+  };
+}
+
+// Export convenience functions
+export function createEffectManager(): LayerEffectManager {
+  return createLayerEffectManager();
+}
+
+// Re-export utilities for convenience
+export { isWebGLAvailable } from "./LogicCapability";

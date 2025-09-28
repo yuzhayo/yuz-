@@ -4,6 +4,7 @@ import cfgJson from "../LogicConfig";
 import { clamp, clamp01, clampRpm60, toRad } from "./LogicMath";
 import { projectToRectBorder } from "./LayerOrbit";
 import { logicZIndexFor } from "./LogicLoaderBasic";
+import { computeBasicEffectState } from "./LayerEffect";
 
 type ImgItem = {
   el: HTMLImageElement;
@@ -31,32 +32,29 @@ type ImgItem = {
   clockSmooth: boolean;
   clockTipRad: number;
   clockSource: { mode: "device" | "utc" | "server"; tzOffsetMinutes?: number | null };
-  // effects (phase 1)
-  effs?: Array<
-    | {
-        kind: "fade";
-        from: number;
-        to: number;
-        durationMs: number;
-        loop: boolean;
-        easing: "linear" | "sineInOut";
-      }
-    | {
-        kind: "pulse";
-        property: "scale" | "alpha";
-        amp: number;
-        periodMs: number;
-        phaseDeg: number;
-      }
-  >;
-  // tilt (lightweight interactive rotation)
-  tilt?: {
-    kind: "tilt";
-    mode: "pointer" | "time" | "device";
+  // basic effects (reuse LayerEffect helper)
+  basicEffects: Array<{
+    type: "fade";
+    from: number;
+    to: number;
+    durationMs: number;
+    loop: boolean;
+    easing: "linear" | "sineInOut";
+  } | {
+    type: "pulse";
+    property: "scale" | "alpha";
+    amp: number;
+    periodMs: number;
+    phaseDeg: number;
+  } | {
+    type: "tilt";
+    mode: "pointer" | "device" | "time";
     axis: "both" | "x" | "y";
     maxDeg: number;
     periodMs?: number;
-  };
+  }>;
+  // tilt state for helper function
+  tiltState: { prevTiltRad?: number };
 };
 
 function urlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): string | null {
@@ -174,15 +172,15 @@ export default function LogicStageDom() {
           ? toRad(((phaseDeg % 360) + 360) % 360)
           : Math.atan2(start.y - cy, start.x - cx);
 
-      // Effects parse (fade/pulse + tilt)
-      const effs: ImgItem["effs"] = [];
-      let tilt: ImgItem["tilt"] | undefined;
+      // Parse basic effects for helper function
+      const basicEffects: ImgItem["basicEffects"] = [];
       if (Array.isArray(layer.effects)) {
         for (const e of layer.effects) {
           if (!e || typeof e !== "object") continue;
-          if ((e as any).type === "fade") {
-            effs.push({
-              kind: "fade",
+          const type = (e as any).type;
+          if (type === "fade") {
+            basicEffects.push({
+              type: "fade",
               from: typeof (e as any).from === "number" ? (e as any).from : 1,
               to: typeof (e as any).to === "number" ? (e as any).to : 1,
               durationMs:
@@ -192,9 +190,9 @@ export default function LogicStageDom() {
               loop: (e as any).loop !== false,
               easing: (e as any).easing === "sineInOut" ? "sineInOut" : "linear",
             });
-          } else if ((e as any).type === "pulse") {
-            effs.push({
-              kind: "pulse",
+          } else if (type === "pulse") {
+            basicEffects.push({
+              type: "pulse",
               property: (e as any).property === "alpha" ? "alpha" : "scale",
               amp:
                 typeof (e as any).amp === "number"
@@ -208,9 +206,9 @@ export default function LogicStageDom() {
                   : 1000,
               phaseDeg: typeof (e as any).phaseDeg === "number" ? (e as any).phaseDeg : 0,
             });
-          } else if ((e as any).type === "tilt") {
-            tilt = {
-              kind: "tilt",
+          } else if (type === "tilt") {
+            basicEffects.push({
+              type: "tilt",
               mode:
                 (e as any).mode === "time" || (e as any).mode === "device"
                   ? (e as any).mode
@@ -221,7 +219,7 @@ export default function LogicStageDom() {
                 typeof (e as any).periodMs === "number" && (e as any).periodMs > 0
                   ? (e as any).periodMs
                   : 4000,
-            };
+            });
           }
         }
       }
@@ -249,8 +247,8 @@ export default function LogicStageDom() {
         clockSmooth,
         clockTipRad,
         clockSource,
-        effs,
-        tilt,
+        basicEffects,
+        tiltState: {},
       });
     }
 
@@ -361,57 +359,25 @@ export default function LogicStageDom() {
           }
         }
 
-        // Tilt (applied after spin/orbit/clock)
-        if (it.tilt) {
-          const axisCount = it.tilt.axis === "both" ? 2 : 1;
-          let tiltRad = 0;
-          if (it.tilt.mode === "time") {
-            const T = (it.tilt.periodMs ?? 4000) / 1000;
-            if (T > 0)
-              tiltRad = (it.tilt.maxDeg * Math.sin(((2 * Math.PI) / T) * elapsed) * Math.PI) / 180;
-          } else {
-            const dx = (px - 0.5) * 2;
-            const dy = (py - 0.5) * 2;
-            let v = 0;
-            if (it.tilt.axis === "x") v = dy;
-            else if (it.tilt.axis === "y") v = -dx;
-            else v = (dy + -dx) / axisCount;
-            const deg = Math.max(-it.tilt.maxDeg, Math.min(it.tilt.maxDeg, v * it.tilt.maxDeg));
-            tiltRad = (deg * Math.PI) / 180;
+        // Apply basic effects using helper function
+        if (it.basicEffects.length > 0) {
+          const effectState = computeBasicEffectState(
+            it.basicEffects,
+            it.tiltState,
+            elapsed,
+            { px, py }
+          );
+          
+          // Apply tilt rotation delta
+          const prev = it.tiltState.prevTiltRad || 0;
+          if (effectState.tiltRad !== prev) {
+            angle += effectState.tiltRad - prev;
+            it.tiltState.prevTiltRad = effectState.tiltRad;
           }
-          angle += tiltRad;
-        }
-
-        it.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${(angle * 180) / Math.PI}deg) scale(${s})`;
-        // Effects (phase 1)
-        if (it.effs && it.effs.length) {
-          let scaleMul = 1;
-          let alpha = 1;
-          for (const ef of it.effs) {
-            if (ef.kind === "fade") {
-              const T = ef.durationMs / 1000;
-              if (T > 0) {
-                let phase = (elapsed % T) / T;
-                if (ef.loop) {
-                  phase = phase > 0.5 ? 1 - (phase - 0.5) * 2 : phase * 2;
-                }
-                const t =
-                  ef.easing === "sineInOut" ? 0.5 - 0.5 * Math.cos(Math.PI * 2 * phase) : phase;
-                alpha = ef.from + (ef.to - ef.from) * t;
-              }
-            } else {
-              const T = ef.periodMs / 1000;
-              if (T > 0) {
-                const omega = (2 * Math.PI) / T;
-                const phase = ((ef.phaseDeg || 0) * Math.PI) / 180;
-                const m = 1 + ef.amp * Math.sin(omega * elapsed + phase);
-                if (ef.property === "scale") scaleMul *= m;
-                else alpha *= Math.max(0, Math.min(1, m));
-              }
-            }
-          }
-          s *= scaleMul;
-          alphaMul = Math.max(0, Math.min(1, alpha));
+          
+          // Apply effect scale and alpha
+          s *= effectState.scaleMul;
+          alphaMul = Math.max(0, Math.min(1, effectState.alpha));
         }
         it.el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) rotate(${(angle * 180) / Math.PI}deg) scale(${s})`;
         it.el.style.opacity = String(alphaMul);
