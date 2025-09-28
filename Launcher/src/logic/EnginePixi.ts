@@ -1,37 +1,6 @@
 import { Application, Assets, Container, Sprite } from "pixi.js";
 import React from "react";
-import type { LogicConfig, LayerConfig } from "./sceneTypes";
-
-// === CONSOLIDATED LOGIC TYPES ===
-// Engine-agnostic sprite interface - compatible with Pixi Sprite
-export interface GenericSprite {
-  x: number;
-  y: number;
-  rotation: number;
-  scale: { x: number; y: number; set?: (x: number, y: number) => void };
-  alpha: number;
-  zIndex?: number;
-  visible?: boolean;
-  // For effects - use any to avoid Pixi type conflicts
-  tint?: any;
-  blendMode?: any;
-  // Engine-specific properties
-  [key: string]: any;
-}
-
-// Engine-agnostic container interface
-export interface GenericContainer {
-  addChild?(child: any): void;
-  removeChild?(child: any): void;
-  children?: any[];
-}
-
-// Engine-agnostic application interface
-export interface GenericApplication {
-  screen?: { width: number; height: number };
-  renderer?: any;
-  stage?: GenericContainer;
-}
+import type { LogicConfig, LayerConfig, GenericSprite, GenericContainer, GenericApplication } from "./LayerCreator";
 
 // Minimal shared types for the logic pipeline (hub + processors + adapters)
 export type BuiltLayer = {
@@ -949,7 +918,7 @@ function createLayerEffectManager(): LayerEffectManager {
 }
 
 // === EMBEDDED LAYER CLOCK MANAGER ===
-import type { ClockConfig, ClockHand } from "./sceneTypes";
+import type { ClockConfig, ClockHand } from "./LayerClock";
 
 type Vec2 = { x: number; y: number };
 

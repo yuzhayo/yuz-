@@ -1,6 +1,4 @@
-import type { GenericApplication, GenericSprite } from "./LogicTypes";
-import type { BuiltLayer } from "./LogicTypes";
-import type { LayerConfig } from "./sceneTypes";
+import type { GenericApplication, GenericSprite, BuiltLayer, LayerConfig } from "./LayerCreator";
 import { clampRpm60, clamp, clamp01, toRad, normDeg } from "./LayerCreator";
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
 

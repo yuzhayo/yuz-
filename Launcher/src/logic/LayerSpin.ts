@@ -1,4 +1,4 @@
-import type { BuiltLayer, GenericSprite, GenericApplication } from "./LogicTypes";
+import type { BuiltLayer, GenericSprite, GenericApplication } from "./LayerCreator";
 import { clampRpm60 } from "./LayerCreator";
 
 // Basic RPM-based spin item

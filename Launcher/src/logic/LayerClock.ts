@@ -13,9 +13,42 @@ function debugClock(layerId: string, ...data: unknown[]) {
   console.info("[logic][clock][debug]", layerId, ...data);
 }
 
-import type { GenericSprite, GenericApplication } from "./LogicTypes";
-import type { BuiltLayer } from "./LogicTypes";
-import type { ClockConfig, ClockHand, LayerConfig } from "./sceneTypes";
+import type { GenericSprite, GenericApplication, BuiltLayer, LayerConfig } from "./LayerCreator";
+
+// Clock-related types (moved from sceneTypes.ts)
+export type ClockHand = "second" | "minute" | "hour";
+export type ClockHandSelection = ClockHand | "none";
+
+export type ClockCenterConfig = {
+  xPct?: number | null;
+  yPct?: number | null;
+};
+
+export type ClockAngleConfig = {
+  angleDeg?: number | null;
+};
+
+export type ClockRadiusConfig = {
+  pct?: number | null; // percentage of distance from center to edge (0..100)
+  value?: number | null; // absolute pixels (post-scale)
+};
+
+export type ClockConfig = {
+  enabled: boolean;
+  center?: ClockCenterConfig | null;
+  base?: ClockAngleConfig | null;
+  tip?: ClockAngleConfig | null;
+  timezone?: "device" | "utc" | "server";
+  spinHand?: ClockHandSelection;
+  spinRadius?: ClockRadiusConfig | null;
+  orbitHand?: ClockHandSelection;
+  orbitCenter?: ClockCenterConfig | null;
+  smooth?: boolean | null;
+  format?: 12 | 24;
+  source?: {
+    tzOffsetMinutes?: number | null;
+  };
+};
 import { clamp, toRad } from "./LayerCreator";
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
 import type { Application } from "pixi.js";

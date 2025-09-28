@@ -1,35 +1,5 @@
-import type { ClockHand, ClockHandSelection, LogicConfig, LayerConfig } from "./sceneTypes";
-
-// === SHARED LOGIC TYPES ===
-// Engine-agnostic sprite interface
-export interface GenericSprite {
-  x: number;
-  y: number;
-  rotation: number;
-  scale: { x: number; y: number; set?: (x: number, y: number) => void };
-  alpha: number;
-  zIndex?: number;
-  visible?: boolean;
-  // For effects
-  tint?: number;
-  blendMode?: any;
-  // Engine-specific properties
-  [key: string]: any;
-}
-
-// Engine-agnostic container interface
-export interface GenericContainer {
-  addChild?(child: any): void;
-  removeChild?(child: any): void;
-  children?: any[];
-}
-
-// Engine-agnostic application interface
-export interface GenericApplication {
-  screen?: { width: number; height: number };
-  renderer?: any;
-  stage?: GenericContainer;
-}
+import type { LogicConfig, LayerConfig, GenericSprite, GenericContainer, GenericApplication } from "./LayerCreator";
+import type { ClockHand, ClockHandSelection } from "./LayerClock";
 
 // Engine interface following LayerSpin.ts pattern for rendering backends
 export type EngineOptions = {

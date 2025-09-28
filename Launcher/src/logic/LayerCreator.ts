@@ -1,5 +1,73 @@
-import type { LogicConfig, LayerConfig } from "./sceneTypes";
-import type { BuiltLayer, BuildResult, GenericSprite, GenericApplication, GenericContainer } from "./LogicTypes";
+// Core types consolidated from sceneTypes.ts and LogicTypes.ts
+export type ImageRegistry = Record<string, string>;
+
+export type ImageRef = { kind: "urlId"; id: string } | { kind: "url"; url: string };
+
+// Engine-agnostic interfaces
+export interface GenericSprite {
+  x: number;
+  y: number;
+  rotation: number;
+  alpha: number;
+  scale: {
+    x: number;
+    y: number;
+    set?: (x: number, y: number) => void;
+  };
+  zIndex?: number;
+}
+
+export interface GenericContainer {
+  addChild: (child: GenericSprite) => void;
+  children: GenericSprite[];
+}
+
+export interface GenericApplication {
+  ticker?: {
+    deltaMS?: number;
+    add?: (fn: () => void) => void;
+    remove?: (fn: () => void) => void;
+  };
+}
+
+// Layer configuration
+export type LayerConfig = {
+  id: string;
+  imageRef: ImageRef;
+  position: { xPct: number; yPct: number };
+  scale?: { pct?: number };
+  angleDeg?: number;
+  // Spin properties
+  spinRPM?: number | null;
+  spinDir?: "cw" | "ccw";
+  // Orbit properties  
+  orbitRPM?: number | null;
+  orbitDir?: "cw" | "ccw";
+  orbitCenter?: { xPct: number; yPct: number };
+  orbitPhaseDeg?: number | null;
+  orbitOrientPolicy?: "none" | "auto" | "override";
+  orbitOrientDeg?: number | null;
+  // Clock and effects
+  clock?: any;
+  effects?: any;
+};
+
+export interface BuiltLayer {
+  id: string;
+  sprite: GenericSprite;
+  cfg: LayerConfig;
+}
+
+export interface BuildResult {
+  container: GenericContainer;
+  layers: BuiltLayer[];
+}
+
+export type LogicConfig = {
+  layersID: string[];
+  imageRegistry: ImageRegistry;
+  layers: LayerConfig[];
+};
 import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
 import { createLayerSpinManager } from "./LayerSpin";
 import type { LayerSpinManager } from "./LayerSpin";
