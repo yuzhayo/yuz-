@@ -615,3 +615,72 @@ export function createPixiApplication(options: Stage2048Options = {}, PixiApplic
     resolution: dpr,
   });
 }
+
+// === CONSOLIDATED LOGIC STAGE ===
+import React from "react";
+
+// Import required types and functions for LogicStage
+// Use a more specific type that matches the expected LogicConfig
+interface LogicConfig {
+  layersID?: string;
+  imageRegistry: Record<string, string>;
+  layers: Array<any>;
+  [key: string]: any;
+}
+
+export type LogicStageProps = {
+  className?: string;
+};
+
+export function LogicStage(props?: LogicStageProps) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    let stage: any = null;
+    let cleanupScene: (() => void) | undefined;
+    (async () => {
+      const el = ref.current;
+      if (!el) return;
+
+      try {
+        // Create stage with 2048×2048 dimensions using the new module
+        stage = await createStage2048(el, {
+          backgroundAlpha: 0,
+          antialias: true,
+          debug: false, // Set to true for development debugging
+          autoInjectCSS: true,
+        });
+
+        // For now, just set up the basic stage without the scene logic
+        // The scene building logic has been moved to EnginePixi.ts
+        
+        // TODO: Implement scene building directly here or import from EnginePixi
+        console.log("[LogicStage] Stage created, scene building temporarily disabled for consolidation");
+        
+        // For now, just create a simple cleanup function
+        cleanupScene = () => {
+          console.log("[LogicStage] Scene cleanup called");
+        };
+      } catch (e) {
+        console.error("[LogicStage] Failed to build scene from logic config", e);
+      }
+    })();
+
+    return () => {
+      try {
+        cleanupScene?.();
+      } catch {}
+      try {
+        stage?.dispose();
+      } catch {}
+    };
+  }, []);
+
+  return React.createElement("div", { 
+    ref, 
+    className: props?.className 
+  });
+}
+
+// Export default for LogicStage
+export default LogicStage;

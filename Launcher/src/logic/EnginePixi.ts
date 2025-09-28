@@ -1,6 +1,88 @@
 import { Application, Assets, Container, Sprite } from "pixi.js";
+import React from "react";
 import type { LogicConfig, LayerConfig } from "./sceneTypes";
-import type { BuiltLayer, LogicEngine, EngineOptions, EngineHandle, GenericSprite } from "./LogicTypes";
+
+// === CONSOLIDATED LOGIC TYPES ===
+// Engine-agnostic sprite interface - compatible with Pixi Sprite
+export interface GenericSprite {
+  x: number;
+  y: number;
+  rotation: number;
+  scale: { x: number; y: number; set?: (x: number, y: number) => void };
+  alpha: number;
+  zIndex?: number;
+  visible?: boolean;
+  // For effects - use any to avoid Pixi type conflicts
+  tint?: any;
+  blendMode?: any;
+  // Engine-specific properties
+  [key: string]: any;
+}
+
+// Engine-agnostic container interface
+export interface GenericContainer {
+  addChild?(child: any): void;
+  removeChild?(child: any): void;
+  children?: any[];
+}
+
+// Engine-agnostic application interface
+export interface GenericApplication {
+  screen?: { width: number; height: number };
+  renderer?: any;
+  stage?: GenericContainer;
+}
+
+// Minimal shared types for the logic pipeline (hub + processors + adapters)
+export type BuiltLayer = {
+  id: string;
+  sprite: GenericSprite;
+  cfg: LayerConfig;
+};
+
+export type BuildResult = {
+  container: GenericContainer;
+  layers: BuiltLayer[];
+};
+
+export type BuildContext = {
+  app: GenericApplication;
+  container: GenericContainer;
+  cfg: LogicConfig;
+  layers: BuiltLayer[];
+};
+
+export interface LogicProcessor {
+  init(ctx: BuildContext): void;
+  onResize?(ctx: BuildContext): void;
+  tick?(dt: number, ctx: BuildContext): void;
+  dispose?(): void;
+}
+
+export interface LogicAdapter<M = unknown> {
+  mount(root: HTMLElement, model: M): void;
+  update?(model: M): void;
+  dispose(): void;
+}
+
+// Engine interface following LayerSpin.ts pattern for rendering backends
+export type EngineOptions = {
+  // Allow backend-specific options
+  [key: string]: unknown;
+};
+
+export type EngineHandle = {
+  dispose(): void;
+};
+
+// Main Engine interface with lifecycle pattern similar to LayerSpinManager
+export interface LogicEngine {
+  init(root: HTMLElement, cfg: LogicConfig, opts?: EngineOptions): Promise<EngineHandle>;
+  tick(elapsed: number): void;
+  recompute(): void;
+  dispose(): void;
+}
+
 import type { EffectHandler } from "./LayerEffect";
 import type {
   GlowSpec,
@@ -1622,6 +1704,313 @@ export function createPixiEngine(): PixiEngine {
   
   return engine;
 }
+
+// === CONSOLIDATED LOGIC TICKER ===
+export type RafTicker = {
+  add(fn: (dt: number) => void): void;
+  remove(fn: (dt: number) => void): void;
+  start(): void;
+  stop(): void;
+  dispose(): void;
+};
+
+export function createRafTicker(): RafTicker {
+  const subs = new Set<(dt: number) => void>();
+  let running = false;
+  let rafId = 0;
+  let last = 0;
+
+  const loop = (t: number) => {
+    rafId = requestAnimationFrame(loop);
+    const dt = last ? (t - last) / 1000 : 0;
+    last = t;
+    for (const fn of subs) fn(dt || 0);
+  };
+
+  return {
+    add(fn) {
+      subs.add(fn);
+    },
+    remove(fn) {
+      subs.delete(fn);
+    },
+    start() {
+      if (running) return;
+      running = true;
+      last = 0;
+      rafId = requestAnimationFrame(loop);
+    },
+    stop() {
+      if (!running) return;
+      running = false;
+      cancelAnimationFrame(rafId);
+      rafId = 0;
+    },
+    dispose() {
+      this.stop();
+      subs.clear();
+    },
+  };
+}
+
+// === CONSOLIDATED LOGIC LOADER ===
+// Import LayerCreator types
+import { createLayerCreatorManager } from "./LayerCreator";
+import type { SpriteFactory } from "./LayerCreator";
+
+// Simplified buildSceneFromLogic function that delegates to LayerCreator
+export async function buildSceneFromLogic(
+  app: GenericApplication,
+  cfg: LogicConfig,
+) {
+  let spriteFactory: SpriteFactory | undefined;
+  let effectHandler: EffectHandler | undefined;
+  
+  // Detect engine type and create appropriate factories
+  if (isPixiApplication(app)) {
+    try {
+      spriteFactory = createPixiSpriteFactory();
+      effectHandler = createPixiEffectHandler();
+    } catch (e) {
+      console.warn("[buildSceneFromLogic] Failed to create Pixi factories:", e);
+    }
+  } else {
+    console.warn("[buildSceneFromLogic] Non-Pixi application detected, DOM support limited");
+    // For DOM or other engines, we could create a DOM sprite factory here
+    // But for now, we'll let LayerCreator handle the lack of sprite factory
+  }
+  
+  const layerCreatorManager = createLayerCreatorManager(spriteFactory);
+  return await layerCreatorManager.init(app, cfg, effectHandler);
+}
+
+// === CONSOLIDATED ENGINE ADAPTER ===
+// Renderer type selection
+export type RendererType = "pixi" | "dom";
+
+// Unified options type that supports both engines
+export type EngineAdapterOptions = {
+  // Pixi-specific options
+  dprCap?: number;
+  resizeTo?: Window | HTMLElement;
+  backgroundAlpha?: number;
+  antialias?: boolean;
+} & EngineOptions;
+
+// Adapter handle that matches the existing pattern
+export type EngineAdapterHandle = {
+  dispose(): void;
+  getEngine(): LogicEngine | null;
+  getRenderer(): RendererType;
+};
+
+/**
+ * LogicEngineAdapter provides a clean abstraction layer for renderer selection.
+ * It can work with both EnginePixi and EngineDom backends while maintaining
+ * a consistent interface for consumers.
+ */
+export class LogicEngineAdapter {
+  private engine: LogicEngine | null = null;
+  private renderer: RendererType = "pixi";
+  private engineHandle: EngineHandle | null = null;
+
+  /**
+   * Initialize the adapter with the specified renderer type
+   */
+  async init(
+    root: HTMLElement,
+    cfg: LogicConfig,
+    renderer: RendererType = "pixi",
+    opts?: EngineAdapterOptions,
+  ): Promise<EngineAdapterHandle> {
+    try {
+      // Clean up any existing engine
+      this.dispose();
+
+      this.renderer = renderer;
+
+      // Create the appropriate engine based on renderer type
+      if (renderer === "pixi") {
+        this.engine = createPixiEngine();
+        const pixiOpts: PixiEngineOptions = {
+          dprCap: opts?.dprCap,
+          resizeTo: opts?.resizeTo,
+          backgroundAlpha: opts?.backgroundAlpha,
+          antialias: opts?.antialias,
+          ...opts,
+        };
+        this.engineHandle = await this.engine.init(root, cfg, pixiOpts);
+      } else if (renderer === "dom") {
+        // Lazy load DOM engine to avoid circular dependencies
+        const domModule = await import("./EngineDom");
+        this.engine = domModule.createDomEngine();
+        const domOpts: any = {
+          ...opts,
+        };
+        this.engineHandle = await this.engine.init(root, cfg, domOpts);
+      } else {
+        throw new Error(`[LogicEngineAdapter] Unsupported renderer type: ${renderer}`);
+      }
+
+      // Return adapter handle
+      return {
+        dispose: () => this.dispose(),
+        getEngine: () => this.engine,
+        getRenderer: () => this.renderer,
+      };
+    } catch (error) {
+      console.error(`[LogicEngineAdapter] Failed to initialize ${renderer} renderer:`, error);
+      this.dispose();
+      throw error;
+    }
+  }
+
+  /**
+   * Forward tick to the underlying engine
+   */
+  tick(elapsed: number): void {
+    try {
+      this.engine?.tick(elapsed);
+    } catch (error) {
+      console.error(`[LogicEngineAdapter] Error in ${this.renderer} tick:`, error);
+    }
+  }
+
+  /**
+   * Forward recompute to the underlying engine
+   */
+  recompute(): void {
+    try {
+      this.engine?.recompute();
+    } catch (error) {
+      console.error(`[LogicEngineAdapter] Error in ${this.renderer} recompute:`, error);
+    }
+  }
+
+  /**
+   * Dispose the current engine and clean up resources
+   */
+  dispose(): void {
+    try {
+      this.engineHandle?.dispose();
+    } catch (error) {
+      console.error(`[LogicEngineAdapter] Error disposing engine handle:`, error);
+    }
+
+    try {
+      this.engine?.dispose();
+    } catch (error) {
+      console.error(`[LogicEngineAdapter] Error disposing ${this.renderer} engine:`, error);
+    }
+
+    this.engine = null;
+    this.engineHandle = null;
+  }
+
+  /**
+   * Get the current engine instance
+   */
+  getEngine(): LogicEngine | null {
+    return this.engine;
+  }
+
+  /**
+   * Get the current renderer type
+   */
+  getRenderer(): RendererType {
+    return this.renderer;
+  }
+
+  /**
+   * Check if the engine has animations that need ticking
+   */
+  hasAnimations(): boolean {
+    try {
+      if (this.renderer === "pixi" && this.engine) {
+        const pixiEngine = this.engine as any;
+        return pixiEngine.hasAnimations?.() ?? false;
+      }
+      if (this.renderer === "dom" && this.engine) {
+        const domEngine = this.engine as any;
+        return domEngine.hasAnimations?.() ?? false;
+      }
+      return false;
+    } catch (error) {
+      console.warn(`[LogicEngineAdapter] Error checking animations:`, error);
+      return false;
+    }
+  }
+}
+
+/**
+ * Create a new LogicEngineAdapter instance
+ */
+export function createLogicEngineAdapter(): LogicEngineAdapter {
+  return new LogicEngineAdapter();
+}
+
+/**
+ * Convenience function to mount a renderer (similar to mountPixi pattern)
+ * This maintains compatibility with the existing mountPixi interface
+ */
+export async function mountRenderer(
+  root: HTMLElement,
+  cfg: LogicConfig,
+  renderer: RendererType = "pixi",
+  opts?: EngineAdapterOptions,
+): Promise<EngineAdapterHandle> {
+  const adapter = createLogicEngineAdapter();
+  return await adapter.init(root, cfg, renderer, opts);
+}
+
+// === CONSOLIDATED LOGIC RENDERER ===
+export type LogicRendererProps = {
+  cfg: LogicConfig;
+  renderer?: RendererType;
+  className?: string;
+};
+
+export function LogicRenderer(props: LogicRendererProps) {
+  const { cfg, renderer = "pixi" } = props;
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let handle: EngineAdapterHandle | null = null;
+
+    let cancelled = false;
+    (async () => {
+      try {
+        handle = await mountRenderer(el, cfg, renderer, { 
+          dprCap: 2, 
+          resizeTo: window 
+        });
+      } catch (e) {
+        if (!cancelled) {
+          console.error(`[LogicRenderer] Failed to mount ${renderer} renderer:`, e);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+      try {
+        handle?.dispose();
+      } catch (error) {
+        console.error(`[LogicRenderer] Error disposing ${renderer} renderer:`, error);
+      }
+    };
+  }, [cfg, renderer]);
+
+  return React.createElement("div", { 
+    ref, 
+    className: props.className ?? "w-full h-full" 
+  });
+}
+
+// Export default for LogicRenderer
+export default LogicRenderer;
 
 // Export convenience functions
 export function createEngine(): PixiEngine {
