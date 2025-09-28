@@ -1,25 +1,30 @@
+/* eslint-env node */
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
 import process from 'node:process'
 import { fileURLToPath } from 'node:url'
 
-const r = (p: string) => path.resolve(path.dirname(fileURLToPath(import.meta.url)), p)
-const monorepoRoot = r('..')
+const resolveFromConfig = (relativePath: string) =>
+  path.resolve(path.dirname(fileURLToPath(import.meta.url)), relativePath)
+
+const monorepoRoot = resolveFromConfig('..')
 
 // Auto-port detection: PORT env > Replit default 5000 > general default 3000
-const isReplit = !!process.env.REPL_ID || !!process.env.REPL_SLUG || !!process.env.REPLIT_DB_URL
+const isReplit = 
+  !!process.env.REPL_ID || !!process.env.REPL_SLUG || !!process.env.REPLIT_DB_URL
+
 const DEFAULT_PORT = isReplit ? 5000 : 3000
 const PORT = Number(process.env.PORT) || DEFAULT_PORT
 
-// Vite 7, ESM. Enhanced configuration with auto-port detection and better asset management.
+// Unified Vite configuration combining best practices from both approaches
 export default defineConfig({
-  root: r('.'),
+  root: resolveFromConfig('.'),
   plugins: [react()],
   resolve: {
     alias: {
-      '@': r('./src'),
-      '@shared': path.resolve(monorepoRoot, 'shared')
+      '@': resolveFromConfig('./src'),
+      '@shared': resolveFromConfig('../shared')
     },
     // Avoid multiple Pixi instances when HMR/monorepo linking
     dedupe: ['pixi.js']
@@ -29,7 +34,7 @@ export default defineConfig({
     include: ['pixi.js']
   },
   define: {
-    __SHARED_ASSETS_PATH__: JSON.stringify(path.resolve(monorepoRoot, 'shared/asset'))
+    __SHARED_ASSETS_PATH__: JSON.stringify(resolveFromConfig('../shared/asset'))
   },
   publicDir: false,
   server: {
@@ -38,7 +43,7 @@ export default defineConfig({
     strictPort: true,
     allowedHosts: true,
     fs: {
-      allow: [r('.'), path.resolve(monorepoRoot, 'shared')]
+      allow: [resolveFromConfig('.'), resolveFromConfig('../shared')]
     }
   },
   preview: {
