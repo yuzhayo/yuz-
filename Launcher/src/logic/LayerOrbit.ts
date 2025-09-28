@@ -1,4 +1,4 @@
-import type { Application, Sprite } from "pixi.js";
+import type { GenericApplication, GenericSprite } from "./LogicTypes";
 import type { BuiltLayer } from "./LogicTypes";
 import type { LayerConfig } from "./sceneTypes";
 import { clampRpm60, clamp, clamp01, toRad, normDeg } from "./LogicMath";
@@ -110,9 +110,9 @@ function clampOrbitCenter(
   };
 }
 
-// Orbit item for basic orbital motion
+// Engine-agnostic orbit item for basic orbital motion
 export type OrbitItem = {
-  sprite: Sprite;
+  sprite: GenericSprite;
   cfg: LayerConfig;
   dir: 1 | -1;
   radPerSec: number;
@@ -125,9 +125,9 @@ export type OrbitItem = {
   spinRpm: number;
 };
 
-// Orbit manager for orbital motion
+// Engine-agnostic orbit manager for orbital motion
 export interface LayerOrbitManager {
-  init(app: Application, built: BuiltLayer[], spinRpmBySprite?: Map<Sprite, number>): void;
+  init(app: GenericApplication, built: BuiltLayer[], spinRpmBySprite?: Map<GenericSprite, number>): void;
   tick(elapsed: number): void;
   recompute(elapsed: number): void;
   dispose(): void;
@@ -137,10 +137,10 @@ export interface LayerOrbitManager {
 // Create orbit manager
 export function createLayerOrbitManager(): LayerOrbitManager {
   const items: OrbitItem[] = [];
-  let _app: Application | null = null;
+  let _app: GenericApplication | null = null;
 
   return {
-    init(application: Application, built: BuiltLayer[], spinRpmBySprite?: Map<Sprite, number>) {
+    init(application: GenericApplication, built: BuiltLayer[], spinRpmBySprite?: Map<GenericSprite, number>) {
       _app = application;
       items.length = 0;
 

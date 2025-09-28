@@ -13,7 +13,7 @@ function debugClock(layerId: string, ...data: unknown[]) {
   console.info("[logic][clock][debug]", layerId, ...data);
 }
 
-import type { Application, Sprite } from "pixi.js";
+import type { GenericSprite, GenericApplication } from "./LogicTypes";
 import type { BuiltLayer } from "./LogicTypes";
 import type { ClockConfig, ClockHand, LayerConfig } from "./sceneTypes";
 import { clamp, toRad } from "./LogicMath";
@@ -57,7 +57,7 @@ export type OrbitSettings = {
 };
 
 export type ClockItem = {
-  sprite: Sprite;
+  sprite: GenericSprite;
   cfg: LayerConfig;
   clock: ClockConfig;
   geometry: ClockGeometry;
@@ -69,20 +69,39 @@ export type ClockItem = {
   time: { source: TimeSource; smooth: boolean; format: 12 | 24 };
 };
 
-// Clock manager interface
+// Engine-agnostic clock manager interface
 export interface LayerClockManager {
-  init(app: Application, built: BuiltLayer[]): void;
+  init(app: GenericApplication, built: BuiltLayer[]): void;
   tick(): void;
   recompute(): void;
   dispose(): void;
   getItems(): ClockItem[];
 }
 
-// Utility functions
-export function getSpriteDimensions(sp: Sprite): { width: number; height: number } | null {
-  const tex = sp.texture;
-  const width = tex.orig?.width ?? tex.width ?? sp.width;
-  const height = tex.orig?.height ?? tex.height ?? sp.height;
+// Engine-agnostic utility functions
+export function getSpriteDimensions(sp: GenericSprite): { width: number; height: number } | null {
+  // Try to get dimensions from texture (Pixi) or element (DOM)
+  const spriteAny = sp as any;
+  let width: number;
+  let height: number;
+  
+  // Pixi.js sprite with texture
+  if (spriteAny.texture) {
+    const tex = spriteAny.texture;
+    width = tex.orig?.width ?? tex.width ?? spriteAny.width;
+    height = tex.orig?.height ?? tex.height ?? spriteAny.height;
+  }
+  // DOM element
+  else if (spriteAny.naturalWidth !== undefined) {
+    width = spriteAny.naturalWidth || spriteAny.width;
+    height = spriteAny.naturalHeight || spriteAny.height;
+  }
+  // Fallback to generic width/height
+  else {
+    width = spriteAny.width || 0;
+    height = spriteAny.height || 0;
+  }
+  
   if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return null;
   return { width, height };
 }
@@ -126,7 +145,7 @@ export function rotateVec(v: Vec2, angle: number): Vec2 {
 }
 
 export function computeClockGeometry(
-  sprite: Sprite,
+  sprite: GenericSprite,
   clock: ClockConfig,
   layerId: string,
 ): ClockGeometry | null {

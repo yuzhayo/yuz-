@@ -1,10 +1,9 @@
-import type { Application, Sprite } from "pixi.js";
-import type { BuiltLayer } from "./LogicTypes";
+import type { BuiltLayer, GenericSprite, GenericApplication } from "./LogicTypes";
 import { clampRpm60 } from "./LogicMath";
 
 // Basic RPM-based spin item
 export type BasicSpinItem = {
-  sprite: Sprite;
+  sprite: GenericSprite;
   baseRad: number;
   radPerSec: number;
   dir: 1 | -1;
@@ -15,22 +14,22 @@ export type SpinItem = BasicSpinItem;
 
 // Basic spin manager for RPM-based spinning only
 export interface LayerSpinManager {
-  init(app: Application, built: BuiltLayer[]): void;
+  init(app: GenericApplication, built: BuiltLayer[]): void;
   tick(elapsed: number): void;
   recompute(): void;
   dispose(): void;
-  getSpinRpm(sprite: Sprite): number;
+  getSpinRpm(sprite: GenericSprite): number;
   getItems(): SpinItem[];
 }
 
 // Create basic spin manager
 export function createLayerSpinManager(): LayerSpinManager {
   const items: SpinItem[] = [];
-  const rpmBySprite = new Map<Sprite, number>();
-  let _app: Application | null = null;
+  const rpmBySprite = new Map<GenericSprite, number>();
+  let _app: GenericApplication | null = null;
 
   return {
-    init(application: Application, built: BuiltLayer[]) {
+    init(application: GenericApplication, built: BuiltLayer[]) {
       _app = application;
       items.length = 0;
       rpmBySprite.clear();
@@ -80,7 +79,7 @@ export function createLayerSpinManager(): LayerSpinManager {
       _app = null;
     },
 
-    getSpinRpm(sprite: Sprite): number {
+    getSpinRpm(sprite: GenericSprite): number {
       return rpmBySprite.get(sprite) ?? 0;
     },
 

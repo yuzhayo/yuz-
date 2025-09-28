@@ -1,6 +1,4 @@
-import { Sprite } from "pixi.js";
-import type { Application } from "pixi.js";
-import type { BuiltLayer } from "./LogicTypes";
+import type { BuiltLayer, GenericSprite, GenericApplication } from "./LogicTypes";
 import type { LayerConfig } from "./sceneTypes";
 import { isWebGLAvailable } from "./LogicCapability";
 
@@ -33,7 +31,7 @@ type TiltSpec = {
 type BasicEffectSpec = FadeSpec | PulseSpec | TiltSpec;
 
 // Advanced effect type definitions
-type GlowSpec = {
+export type GlowSpec = {
   type: "glow";
   color: number;
   alpha: number;
@@ -41,7 +39,7 @@ type GlowSpec = {
   pulseMs?: number;
 };
 
-type BloomSpec = {
+export type BloomSpec = {
   type: "bloom";
   strength: number;
 };
@@ -59,11 +57,11 @@ type ShockwaveSpec = {
   fade: boolean;
 };
 
-type AdvancedEffectSpec = GlowSpec | BloomSpec | DistortSpec | ShockwaveSpec;
+export type AdvancedEffectSpec = GlowSpec | BloomSpec | DistortSpec | ShockwaveSpec;
 
-// Aura sprite for glow/bloom effects
+// Engine-agnostic aura interface for glow/bloom effects
 type Aura = {
-  sprite: Sprite;
+  sprite: GenericSprite;
   baseScale: number;
   strength: number;
   pulseMs?: number;
@@ -101,14 +99,21 @@ export type LayerEffectItem = {
   shock?: Shock;
 };
 
-// Layer effect manager interface
+// Engine-agnostic layer effect manager interface
 export interface LayerEffectManager {
-  init(app: Application, built: BuiltLayer[]): void;
+  init(app: GenericApplication, built: BuiltLayer[]): void;
   tick(elapsed: number, builtRef: BuiltLayer[]): void;
   recompute(): void;
   dispose(): void;
   getItems(): LayerEffectItem[];
   hasEffects(): boolean;
+}
+
+// Engine-specific effect handler interface
+export interface EffectHandler {
+  createAuraSprite(originalSprite: GenericSprite, spec: GlowSpec | BloomSpec): GenericSprite | null;
+  applyAdvancedEffect(sprite: GenericSprite, spec: AdvancedEffectSpec, elapsed: number): void;
+  disposeAuraSprite(sprite: GenericSprite): void;
 }
 
 // Normalization functions for basic effects
@@ -277,9 +282,9 @@ export function computeBasicEffectState(
   return { alpha, scaleMul, tiltRad };
 }
 
-// Create layer effect manager implementation
-export function createLayerEffectManager(): LayerEffectManager {
-  let _app: Application | null = null;
+// Create layer effect manager implementation with pluggable effect handler
+export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEffectManager {
+  let _app: GenericApplication | null = null;
   const items: LayerEffectItem[] = [];
   
   // Pointer state for tilt effects (0..1)
@@ -324,7 +329,7 @@ export function createLayerEffectManager(): LayerEffectManager {
   const advancedEffectsEnabled = canUseAdvanced();
 
   return {
-    init(app: Application, built: BuiltLayer[]) {
+    init(app: GenericApplication, built: BuiltLayer[]) {
       _app = app;
       items.length = 0;
 
@@ -355,44 +360,21 @@ export function createLayerEffectManager(): LayerEffectManager {
           auras: [],
         };
 
-        // Initialize advanced effects if enabled
-        if (advancedEffectsEnabled && effects.advanced.length > 0) {
+        // Initialize advanced effects if enabled and handler is available
+        if (advancedEffectsEnabled && effectHandler && effects.advanced.length > 0) {
           for (const spec of effects.advanced) {
-            if (spec.type === "glow") {
-              const auraSprite = new Sprite(b.sprite.texture);
-              auraSprite.anchor.set(0.5);
-              auraSprite.tint = spec.color;
-              auraSprite.alpha = spec.alpha;
-              auraSprite.blendMode = 1; // BLEND_MODES.ADD
-              const parent = b.sprite.parent;
-              if (parent) {
-                const index = parent.getChildIndex(b.sprite);
-                parent.addChildAt(auraSprite, index);
+            if ((spec.type === "glow" || spec.type === "bloom")) {
+              const auraSprite = effectHandler.createAuraSprite(b.sprite, spec);
+              if (auraSprite) {
+                item.auras.push({
+                  sprite: auraSprite,
+                  baseScale: baseScale * (spec.type === "glow" ? (1 + spec.scale) : (1 + 0.2 + spec.strength * 0.2)),
+                  strength: spec.type === "glow" ? 1 : spec.strength,
+                  pulseMs: spec.type === "glow" ? spec.pulseMs : undefined,
+                  color: spec.type === "glow" ? spec.color : undefined,
+                  alpha: spec.type === "glow" ? spec.alpha : Math.min(1, 0.3 + spec.strength * 0.4),
+                });
               }
-              item.auras.push({
-                sprite: auraSprite,
-                baseScale: baseScale * (1 + spec.scale),
-                strength: 1,
-                pulseMs: spec.pulseMs,
-                color: spec.color,
-                alpha: spec.alpha,
-              });
-            } else if (spec.type === "bloom") {
-              const auraSprite = new Sprite(b.sprite.texture);
-              auraSprite.anchor.set(0.5);
-              auraSprite.alpha = Math.min(1, 0.3 + spec.strength * 0.4);
-              auraSprite.blendMode = 1; // BLEND_MODES.ADD
-              const parent = b.sprite.parent;
-              if (parent) {
-                const index = parent.getChildIndex(b.sprite);
-                parent.addChildAt(auraSprite, index);
-              }
-              item.auras.push({
-                sprite: auraSprite,
-                baseScale: baseScale * (1 + 0.2 + spec.strength * 0.2),
-                strength: spec.strength,
-                alpha: auraSprite.alpha,
-              });
             } else if (spec.type === "distort") {
               item.distort = {
                 ampPx: spec.ampPx,
@@ -436,7 +418,12 @@ export function createLayerEffectManager(): LayerEffectManager {
         // Apply basic effects
         b.sprite.alpha = Math.max(0, Math.min(1, alpha));
         const finalScale = item.baseScale * scaleMul;
-        b.sprite.scale.set(finalScale, finalScale);
+        if (typeof b.sprite.scale === 'object' && 'set' in b.sprite.scale && typeof b.sprite.scale.set === 'function') {
+          b.sprite.scale.set(finalScale, finalScale);
+        } else {
+          b.sprite.scale.x = finalScale;
+          b.sprite.scale.y = finalScale;
+        }
 
         // Apply tilt rotation delta
         const prev = item.prevTiltRad || 0;
@@ -455,7 +442,12 @@ export function createLayerEffectManager(): LayerEffectManager {
             const T = a.pulseMs / 1000;
             if (T > 0) s = a.baseScale * (1 + 0.05 * Math.sin(((2 * Math.PI) / T) * elapsed));
           }
-          a.sprite.scale.set(s, s);
+          if (typeof a.sprite.scale === 'object' && 'set' in a.sprite.scale && typeof a.sprite.scale.set === 'function') {
+            a.sprite.scale.set(s, s);
+          } else {
+            a.sprite.scale.x = s;
+            a.sprite.scale.y = s;
+          }
         }
 
         // Apply distortion (additive position offset)
@@ -473,7 +465,12 @@ export function createLayerEffectManager(): LayerEffectManager {
             const phase = (elapsed % T) / T;
             const mul = 1 + (item.shock.maxScale - 1) * Math.sin(Math.PI * phase);
             const s = item.shock.baseScale * mul;
-            b.sprite.scale.set(s, s); // Override scale from basic effects
+            if (typeof b.sprite.scale === 'object' && 'set' in b.sprite.scale && typeof b.sprite.scale.set === 'function') {
+              b.sprite.scale.set(s, s);
+            } else {
+              b.sprite.scale.x = s;
+              b.sprite.scale.y = s;
+            }
             if (item.shock.fade) {
               b.sprite.alpha = 0.8 + 0.2 * Math.cos(Math.PI * phase); // Override alpha from basic effects
             }
@@ -491,13 +488,15 @@ export function createLayerEffectManager(): LayerEffectManager {
       // Remove pointer listeners
       removePointerListeners();
 
-      // Clean up aura sprites
+      // Clean up aura sprites using effect handler if available
       for (const item of items) {
         for (const aura of item.auras) {
-          try {
-            aura.sprite.destroy();
-          } catch {
-            // Ignore destroy errors
+          if (effectHandler) {
+            try {
+              effectHandler.disposeAuraSprite(aura.sprite);
+            } catch {
+              // Ignore dispose errors
+            }
           }
         }
       }

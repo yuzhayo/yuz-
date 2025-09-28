@@ -1,7 +1,5 @@
-import { Assets, Container, Sprite } from "pixi.js";
-import type { Application } from "pixi.js";
 import type { LogicConfig, LayerConfig } from "./sceneTypes";
-import type { BuiltLayer, BuildResult } from "./LogicTypes";
+import type { BuiltLayer, BuildResult, GenericSprite, GenericApplication, GenericContainer } from "./LogicTypes";
 import { logicApplyBasicTransform, logicZIndexFor } from "./LogicLoaderBasic";
 import { createLayerSpinManager } from "./LayerSpin";
 import type { LayerSpinManager } from "./LayerSpin";
@@ -10,12 +8,15 @@ import type { LayerClockManager } from "./LayerClock";
 import { createLayerOrbitManager } from "./LayerOrbit";
 import type { LayerOrbitManager } from "./LayerOrbit";
 import { createLayerEffectManager } from "./LayerEffect";
-import type { LayerEffectManager } from "./LayerEffect";
+import type { LayerEffectManager, EffectHandler } from "./LayerEffect";
 
-// Type definitions for LayerCreator module
+// Re-export EffectHandler for external use
+export type { EffectHandler } from "./LayerEffect";
+
+// Engine-agnostic type definitions for LayerCreator module
 export type LayerCreatorItem = {
   id: string;
-  sprite: Sprite;
+  sprite: GenericSprite;
   cfg: LayerConfig;
 };
 
@@ -29,15 +30,22 @@ export type LayerCreatorManagersState = {
   tickFunction?: () => void;
 };
 
-// Manager interface for LayerCreator
+// Engine-agnostic manager interface for LayerCreator
 export interface LayerCreatorManager {
-  init(app: Application, cfg: LogicConfig): Promise<BuildResult>;
+  init(app: GenericApplication, cfg: LogicConfig, effectHandler?: EffectHandler): Promise<BuildResult>;
   tick(elapsed: number): void;
   recompute(): void;
   dispose(): void;
-  getContainer(): Container;
+  getContainer(): GenericContainer;
   getLayers(): BuiltLayer[];
   hasAnimations(): boolean;
+}
+
+// Engine-specific sprite factory interface
+export interface SpriteFactory {
+  createSprite(url: string): Promise<GenericSprite>;
+  createContainer(): GenericContainer;
+  loadAssets(urls: string[]): Promise<void>;
 }
 
 // Utility function to get URL from image reference
@@ -47,18 +55,20 @@ function getUrlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): stri
   return url ?? null;
 }
 
-// Create LayerCreator manager implementation
-export function createLayerCreatorManager(): LayerCreatorManager {
-  let _app: Application | null = null;
-  let _container: Container | null = null;
+// Create LayerCreator manager implementation with pluggable sprite factory
+export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerCreatorManager {
+  let _app: GenericApplication | null = null;
+  let _container: GenericContainer | null = null;
   let _layers: BuiltLayer[] = [];
   let _managersState: LayerCreatorManagersState | null = null;
 
   const manager = {
-    async init(app: Application, cfg: LogicConfig): Promise<BuildResult> {
+    async init(app: GenericApplication, cfg: LogicConfig, effectHandler?: EffectHandler): Promise<BuildResult> {
       _app = app;
-      _container = new Container();
-      _container.sortableChildren = true;
+      _container = spriteFactory ? spriteFactory.createContainer() : ({ addChild: () => {}, children: [] } as GenericContainer);
+      if (_container && typeof (_container as any).sortableChildren !== 'undefined') {
+        (_container as any).sortableChildren = true;
+      }
       _layers = [];
 
       // Sort layers by z-index then id fallback, to define render order
@@ -72,21 +82,19 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       const built: BuiltLayer[] = [];
       let warnedZ = false;
 
-      // Prefetch assets in parallel to avoid sequential fetch latency
+      // Prefetch assets using sprite factory if available
       const urlSet = new Set<string>();
       for (const layer of layers) {
         const u = getUrlForImageRef(cfg, layer.imageRef);
         if (u) urlSet.add(u);
       }
-      try {
-        await Promise.all(
-          Array.from(urlSet).map((u) =>
-            Assets.load(u).catch((e) => {
-              console.warn("[logic] Preload failed for", u, e);
-            }),
-          ),
-        );
-      } catch {}
+      if (spriteFactory && urlSet.size > 0) {
+        try {
+          await spriteFactory.loadAssets(Array.from(urlSet));
+        } catch (e) {
+          console.warn("[logic] Asset preloading failed", e);
+        }
+      }
 
       // Create sprites for each layer
       for (const layer of layers) {
@@ -118,14 +126,25 @@ export function createLayerCreatorManager(): LayerCreatorManager {
           continue;
         }
         try {
-          // Texture should be cached from prefetch; load again if needed
-          const texture = await Assets.load(url);
-          const sprite = new Sprite(texture);
-          sprite.anchor.set(0.5);
+          if (!spriteFactory) {
+            console.warn("[logic] No sprite factory provided, skipping layer", layer.id);
+            continue;
+          }
+          
+          const sprite = await spriteFactory.createSprite(url);
+          
+          // Set anchor if supported (Pixi-specific)
+          if (typeof (sprite as any).anchor?.set === 'function') {
+            (sprite as any).anchor.set(0.5);
+          }
+          
           logicApplyBasicTransform(app, sprite, layer);
-          // Set zIndex from ID-derived order only
-          sprite.zIndex = logicZIndexFor(layer);
-          _container.addChild(sprite);
+          
+          // Add to container if it supports addChild
+          if (_container && typeof _container.addChild === 'function') {
+            _container.addChild(sprite);
+          }
+          
           built.push({ id: layer.id, sprite, cfg: layer });
         } catch (e) {
           console.error("[logic] Failed to load", url, "for layer", layer.id, e);
@@ -142,7 +161,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       clockManager.init(app, built);
 
       // Build RPM map for orbit system compatibility
-      const spinRpmBySprite = new Map<Sprite, number>();
+      const spinRpmBySprite = new Map<GenericSprite, number>();
       for (const b of built) {
         spinRpmBySprite.set(b.sprite, spinManager.getSpinRpm(b.sprite));
       }
@@ -151,7 +170,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       orbitManager.init(app, built, spinRpmBySprite);
 
       // Effects (unified system)
-      const effectManager = createLayerEffectManager();
+      const effectManager = createLayerEffectManager(effectHandler);
       effectManager.init(app, built);
 
       // Create managers state
@@ -189,7 +208,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
         )
           return;
         
-        const dt = (app.ticker.deltaMS || 16.667) / 1000;
+        const dt = ((app as any).ticker?.deltaMS || 16.667) / 1000;
         _managersState.elapsed += dt;
         
         // Basic Spin (handles only basic RPM-based spins)
@@ -206,8 +225,8 @@ export function createLayerCreatorManager(): LayerCreatorManager {
 
       // Add ticker if we have animations
       try {
-        if (manager.hasAnimations()) {
-          app.ticker.add(tick);
+        if (manager.hasAnimations() && (app as any).ticker?.add) {
+          (app as any).ticker.add(tick);
         }
       } catch (e) {
         console.error("[LayerCreator] Error adding ticker:", e);
@@ -254,8 +273,8 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       } catch {}
       
       try {
-        if (_app && _managersState.tickFunction) {
-          _app.ticker.remove(_managersState.tickFunction);
+        if (_app && _managersState.tickFunction && (_app as any).ticker?.remove) {
+          (_app as any).ticker.remove(_managersState.tickFunction);
         }
       } catch {}
       
@@ -281,7 +300,7 @@ export function createLayerCreatorManager(): LayerCreatorManager {
       _layers = [];
     },
 
-    getContainer(): Container {
+    getContainer(): GenericContainer {
       if (!_container) {
         throw new Error("[LayerCreator] Container not initialized");
       }

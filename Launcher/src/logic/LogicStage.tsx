@@ -33,7 +33,10 @@ export default function LogicStage() {
             (scene.container as any)._cleanup?.();
           } catch {}
           try {
-            scene.container.destroy({ children: true });
+            // Only call destroy if it exists (Pixi containers have destroy, but generic containers may not)
+            if (typeof (scene.container as any).destroy === 'function') {
+              (scene.container as any).destroy({ children: true });
+            }
           } catch {}
         };
       } catch (e) {

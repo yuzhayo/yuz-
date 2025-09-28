@@ -5,8 +5,10 @@ import MainScreenRendererBadge from "./MainScreenRendererBadge";
 import MainScreenUpdater from "./MainScreenUpdater";
 import MainScreenApiTester from "./MainScreenApiTester";
 import LogicStage from "./logic/LogicStage";
-import LogicStageDom from "./logic/LogicStageDom";
+import LogicRenderer from "./logic/LogicRenderer";
 import { detectRenderer, type RendererMode } from "./logic/LogicCapability";
+import logicConfigJson from "./LogicConfig";
+import type { LogicConfig } from "./logic/sceneTypes";
 
 export type MainScreenProps = {
   rendererMode?: RendererMode; // 'auto' | 'pixi' | 'dom'
@@ -25,7 +27,7 @@ export default function MainScreen(props: MainScreenProps) {
     <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Renderer canvas behind UI */}
       <div className="absolute inset-0">
-        {chosen === "pixi" ? <LogicStage /> : <LogicStageDom />}
+        {chosen === "pixi" ? <LogicStage /> : <LogicRenderer cfg={logicConfigJson as LogicConfig} renderer="dom" />}
       </div>
       {/* Invisible gesture target */}
       <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto" />

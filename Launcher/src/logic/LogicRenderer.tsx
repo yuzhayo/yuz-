@@ -1,10 +1,10 @@
 import React from "react";
 import type { LogicConfig } from "./sceneTypes";
-import { mountPixi, type PixiAdapterHandle } from "./LogicRendererPixi";
+import { mountRenderer, type EngineAdapterHandle, type RendererType } from "./LogicEngineAdapter";
 
 export type LogicRendererProps = {
   cfg: LogicConfig;
-  renderer?: "pixi" | "dom";
+  renderer?: RendererType;
   className?: string;
 };
 
@@ -15,19 +15,19 @@ export default function LogicRenderer(props: LogicRendererProps) {
   React.useEffect(() => {
     const el = ref.current;
     if (!el) return;
-    let handle: PixiAdapterHandle | null = null;
+    let handle: EngineAdapterHandle | null = null;
 
     let cancelled = false;
     (async () => {
       try {
-        if (renderer === "pixi") {
-          handle = await mountPixi(el, cfg, { dprCap: 2, resizeTo: window });
-        } else {
-          console.warn("[LogicRenderer] DOM adapter not implemented; falling back to PIXI");
-          handle = await mountPixi(el, cfg, { dprCap: 2, resizeTo: window });
-        }
+        handle = await mountRenderer(el, cfg, renderer, { 
+          dprCap: 2, 
+          resizeTo: window 
+        });
       } catch (e) {
-        if (!cancelled) console.error("[LogicRenderer] mount failed", e);
+        if (!cancelled) {
+          console.error(`[LogicRenderer] Failed to mount ${renderer} renderer:`, e);
+        }
       }
     })();
 
@@ -35,7 +35,9 @@ export default function LogicRenderer(props: LogicRendererProps) {
       cancelled = true;
       try {
         handle?.dispose();
-      } catch {}
+      } catch (error) {
+        console.error(`[LogicRenderer] Error disposing ${renderer} renderer:`, error);
+      }
     };
   }, [cfg, renderer]);
 
