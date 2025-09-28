@@ -17,7 +17,7 @@ export type MainScreenProps = {
  * Layar utama launcher yang menampilkan navigasi dock.
  * Menggunakan Pixi rendering untuk efek visual kosmik.
  */
-export default function MainScreen(props: MainScreenProps) {
+export default function MainScreen(_props: MainScreenProps) {
   const gesture = useMainScreenBtnGesture();
   const label = "Renderer: Pixi";
   return (
