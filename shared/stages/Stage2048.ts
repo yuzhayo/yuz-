@@ -630,9 +630,11 @@ interface LogicConfig {
 
 export type LogicStageProps = {
   className?: string;
+  buildSceneFromLogic?: (app: any, config: any) => Promise<{ container: any }>;
+  logicConfig?: any;
 };
 
-export function LogicStage(props?: LogicStageProps) {
+export function LogicStage(props: LogicStageProps = {}) {
   const ref = React.useRef<HTMLDivElement | null>(null);
 
   React.useEffect(() => {
@@ -651,26 +653,29 @@ export function LogicStage(props?: LogicStageProps) {
           autoInjectCSS: true,
         });
 
-        // Import the buildSceneFromLogic function and LogicConfig 
-        const { buildSceneFromLogic } = await import("../../Launcher/src/logic/EnginePixi");
-        const logicConfigModule = await import("../../Launcher/src/LogicConfig");
-        
-        // Build and add the scene using the proper workflow
-        const cfg = logicConfigModule.default as unknown as LogicConfig;
-        const scene = await buildSceneFromLogic(stage.app, cfg);
-        stage.app.stage.addChild(scene.container);
+        // Build scene using provided builder function and config
+        if (props.buildSceneFromLogic && props.logicConfig) {
+          const scene = await props.buildSceneFromLogic(stage.app, props.logicConfig);
+          stage.app.stage.addChild(scene.container);
+          console.log("[LogicStage] Scene built and added successfully");
 
-        cleanupScene = () => {
-          try {
-            (scene.container as any)._cleanup?.();
-          } catch {}
-          try {
-            // Only call destroy if it exists (Pixi containers have destroy, but generic containers may not)
-            if (typeof (scene.container as any).destroy === 'function') {
-              (scene.container as any).destroy({ children: true });
-            }
-          } catch {}
-        };
+          cleanupScene = () => {
+            try {
+              (scene.container as any)._cleanup?.();
+            } catch {}
+            try {
+              // Only call destroy if it exists (Pixi containers have destroy, but generic containers may not)
+              if (typeof (scene.container as any).destroy === 'function') {
+                (scene.container as any).destroy({ children: true });
+              }
+            } catch {}
+          };
+        } else {
+          console.log("[LogicStage] No scene builder provided, stage created without scene");
+          cleanupScene = () => {
+            console.log("[LogicStage] Scene cleanup called");
+          };
+        }
       } catch (e) {
         console.error("[LogicStage] Failed to build scene from logic config", e);
       }

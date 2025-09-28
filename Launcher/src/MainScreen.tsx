@@ -27,7 +27,17 @@ export default function MainScreen(props: MainScreenProps) {
     <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800">
       {/* Renderer canvas behind UI */}
       <div className="absolute inset-0">
-        {chosen === "pixi" ? <LogicStage /> : <LogicRenderer cfg={logicConfigJson as LogicConfig} renderer="dom" />}
+        {chosen === "pixi" ? (
+          <LogicStage 
+            buildSceneFromLogic={async (app: any, config: any) => {
+              const { buildSceneFromLogic } = await import('./logic/EnginePixi');
+              return buildSceneFromLogic(app, config);
+            }}
+            logicConfig={logicConfigJson as LogicConfig}
+          />
+        ) : (
+          <LogicRenderer cfg={logicConfigJson as LogicConfig} renderer="dom" />
+        )}
       </div>
       {/* Invisible gesture target */}
       <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto" />
