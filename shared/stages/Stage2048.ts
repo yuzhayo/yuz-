@@ -500,7 +500,7 @@ export async function createStage2048(
       // Try to import Pixi.js dynamically
       const pixi = await import('pixi.js')
       PixiApplication = pixi.Application
-    } catch (error) {
+    } catch (_error) {
       throw new Error('Pixi.js Application not available. Please provide PixiApplication parameter or install pixi.js')
     }
   }

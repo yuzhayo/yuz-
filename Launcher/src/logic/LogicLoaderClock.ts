@@ -103,14 +103,6 @@ function pointOnRect(width: number, height: number, angleRad: number): Vec2 {
   return { x: best.x, y: best.y }
 }
 
-function rotateVec(v: Vec2, angle: number): Vec2 {
-  const c = Math.cos(angle)
-  const s = Math.sin(angle)
-  return {
-    x: v.x * c - v.y * s,
-    y: v.x * s + v.y * c,
-  }
-}
 
 function clampCenter(center: ClockConfig['center'] | null | undefined, fallback: { xPct: number; yPct: number }): { xPct: number; yPct: number } {
   const x = typeof center?.xPct === 'number' && isFinite(center.xPct) ? center.xPct : fallback.xPct
