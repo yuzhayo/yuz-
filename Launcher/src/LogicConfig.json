@@ -97,8 +97,8 @@
       "clock": {
         "enabled": true,
         "center": { "xPct": 50, "yPct": 50 },
-        "base": { "angleDeg": 0 },
-        "tip": { "angleDeg": 0 },
+        "base": { "angleDeg": 90 },
+        "tip": { "angleDeg": 180 },
         "spinHand": "second",
         "spinRadius": { "pct": 8 },
         "orbitHand": "",
