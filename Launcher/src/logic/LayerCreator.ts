@@ -690,11 +690,54 @@ export function createPixiSpriteFactory(): SpriteFactory {
   };
 }
 
+// === CONSOLIDATED FACTORY CREATION ===
+export function createPixiFactories(): { spriteFactory: SpriteFactory; effectHandler: EffectHandler } {
+  return {
+    spriteFactory: createPixiSpriteFactory(),
+    effectHandler: createPixiEffectHandler(),
+  };
+}
+
 // ===================================================================
 // 🟡 BLOCK 8: ANIMATION MANAGERS STATE
 // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
 // Manages spin, orbit, clock, and effect animations
 // ===================================================================
+
+// === UNIFIED MANAGER CREATION ===
+export function createAnimationManagers(
+  app: GenericApplication,
+  layers: BuiltLayer[],
+  effectHandler?: EffectHandler,
+): LayerCreatorManagersState {
+  // Initialize all managers
+  const spinManager = createLayerSpinManager();
+  spinManager.init(app, layers);
+
+  const clockManager = createLayerClockManager();
+  clockManager.init(app, layers);
+
+  // Build RPM map for orbit system compatibility
+  const spinRpmBySprite = new Map<GenericSprite, number>();
+  for (const layer of layers) {
+    spinRpmBySprite.set(layer.sprite, spinManager.getSpinRpm(layer.sprite));
+  }
+
+  const orbitManager = createLayerOrbitManager();
+  orbitManager.init(app, layers, spinRpmBySprite);
+
+  // Effects (unified system)
+  const effectManager = createLayerEffectManager(effectHandler);
+  effectManager.init(app, layers);
+
+  return {
+    spinManager,
+    clockManager,
+    orbitManager,
+    effectManager,
+    elapsed: 0,
+  };
+}
 
 export type LayerCreatorItem = {
   id: string;
@@ -871,34 +914,8 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
       // ===================================================================
 
-      // Initialize all managers
-      const spinManager = createLayerSpinManager();
-      spinManager.init(app, built);
-
-      const clockManager = createLayerClockManager();
-      clockManager.init(app, built);
-
-      // Build RPM map for orbit system compatibility
-      const spinRpmBySprite = new Map<GenericSprite, number>();
-      for (const b of built) {
-        spinRpmBySprite.set(b.sprite, spinManager.getSpinRpm(b.sprite));
-      }
-
-      const orbitManager = createLayerOrbitManager();
-      orbitManager.init(app, built, spinRpmBySprite);
-
-      // Effects (unified system)
-      const effectManager = createLayerEffectManager(effectHandler);
-      effectManager.init(app, built);
-
-      // Create managers state
-      _managersState = {
-        spinManager,
-        clockManager,
-        orbitManager,
-        effectManager,
-        elapsed: 0,
-      };
+      // Initialize all managers using unified function
+      _managersState = createAnimationManagers(app, built, effectHandler);
 
       // ===================================================================
       // 🟡 BLOCK 12: LIFECYCLE HOOKS (RESIZE/TICKER)
@@ -1199,12 +1216,6 @@ export async function createStage2048(
   };
 }
 
-/**
- * Create just the transform manager (for custom Pixi setups)
- */
-export function createTransformManager(debug = false): StageTransformManager {
-  return new StageTransformManager(debug);
-}
 
 /**
  * Create just the Pixi application with correct dimensions
@@ -1241,80 +1252,72 @@ export function createPixiApplication(
     ...appOverrides,
   };
 
-  // Special handling for environments with limited rendering support (like headless browsers)
+  // Define fallback configurations to try in order
+  const fallbackConfigs = [
+    {
+      name: "WebGL",
+      config: { ...baseConfig, preference: "webgl" }
+    },
+    {
+      name: "Canvas", 
+      config: { ...baseConfig, forceCanvas: true }
+    },
+    {
+      name: "Minimal",
+      config: { width: STAGE_WIDTH, height: STAGE_HEIGHT, hello: false }
+    }
+  ];
+
   console.log("[createPixiApplication] Attempting Pixi Application creation");
-  
-  try {
-    // Try with explicit renderer preference
-    console.log("[createPixiApplication] Trying with webgl preference");
-    return new PixiApplication({
-      ...baseConfig,
-      preference: "webgl",
-    });
-  } catch (webglError) {
-    console.warn("[createPixiApplication] WebGL failed:", webglError);
-    
+  let lastError: unknown = null;
+
+  // Try each configuration in order
+  for (const { name, config } of fallbackConfigs) {
     try {
-      // Try forcing canvas
-      console.log("[createPixiApplication] Trying with forceCanvas");
-      return new PixiApplication({
-        ...baseConfig,
-        forceCanvas: true,
-      });
-    } catch (canvasError) {
-      console.warn("[createPixiApplication] ForceCanvas failed:", canvasError);
-      
-      try {
-        // Try with minimal configuration
-        console.log("[createPixiApplication] Trying minimal config");
-        return new PixiApplication({
-          width: STAGE_WIDTH,
-          height: STAGE_HEIGHT,
-          hello: false,
-        });
-      } catch (minimalError) {
-        console.error("[createPixiApplication] All standard attempts failed:", minimalError);
-        
-        // Last resort: Create a mock application for environments that don't support Pixi
-        console.warn("[createPixiApplication] Creating mock application for unsupported environment");
-        
-        const canvas = document.createElement('canvas');
-        canvas.width = STAGE_WIDTH;
-        canvas.height = STAGE_HEIGHT;
-        
-        // Create minimal mock that satisfies the interface
-        const mockApp = {
-          view: canvas,
-          renderer: {
-            type: 1, // RENDERER_TYPE.CANVAS
-            width: STAGE_WIDTH,
-            height: STAGE_HEIGHT,
-            resolution: 1,
-            backgroundColor: 0x000000,
-            backgroundAlpha: 0,
-          },
-          stage: {
-            addChild: () => {},
-            removeChild: () => {},
-            children: [],
-          },
-          ticker: {
-            add: () => {},
-            remove: () => {},
-            start: () => {},
-            stop: () => {},
-            deltaMS: 16.67,
-          },
-          destroy: () => {},
-          render: () => {},
-          screen: { x: 0, y: 0, width: STAGE_WIDTH, height: STAGE_HEIGHT },
-        };
-        
-        console.log("[createPixiApplication] Mock application created for compatibility");
-        return mockApp as any;
-      }
+      console.log(`[createPixiApplication] Trying with ${name} preference`);
+      return new PixiApplication(config);
+    } catch (error) {
+      console.warn(`[createPixiApplication] ${name} failed:`, error);
+      lastError = error;
     }
   }
+
+  // If all standard attempts failed, create a mock application
+  console.warn("[createPixiApplication] All standard attempts failed, creating mock application");
+  
+  const canvas = document.createElement('canvas');
+  canvas.width = STAGE_WIDTH;
+  canvas.height = STAGE_HEIGHT;
+  
+  const mockApp = {
+    view: canvas,
+    renderer: {
+      type: 1, // RENDERER_TYPE.CANVAS
+      width: STAGE_WIDTH,
+      height: STAGE_HEIGHT,
+      resolution: 1,
+      backgroundColor: 0x000000,
+      backgroundAlpha: 0,
+    },
+    stage: {
+      addChild: () => {},
+      removeChild: () => {},
+      children: [],
+    },
+    ticker: {
+      add: () => {},
+      remove: () => {},
+      start: () => {},
+      stop: () => {},
+      deltaMS: 16.67,
+    },
+    destroy: () => {},
+    render: () => {},
+    screen: { x: 0, y: 0, width: STAGE_WIDTH, height: STAGE_HEIGHT },
+  };
+  
+  console.log("[createPixiApplication] Mock application created for compatibility");
+  return mockApp as any;
 }
 
 // === REACT INTEGRATION ===
@@ -1463,8 +1466,9 @@ export async function buildSceneFromLogic(
   // Detect engine type and create appropriate factories
   if (isPixiApplication(app)) {
     try {
-      spriteFactory = createPixiSpriteFactory();
-      effectHandler = createPixiEffectHandler();
+      const factories = createPixiFactories();
+      spriteFactory = factories.spriteFactory;
+      effectHandler = factories.effectHandler;
     } catch (e) {
       console.warn("[buildSceneFromLogic] Failed to create Pixi factories:", e);
     }
@@ -1506,10 +1510,9 @@ export function createPixiEngine(): PixiEngine {
       root.appendChild(_app.view as HTMLCanvasElement);
 
       // Use LayerCreator to build the scene
-      const spriteFactory = createPixiSpriteFactory();
-      const effectHandler = createPixiEffectHandler();
-      _layerManager = createLayerCreatorManager(spriteFactory);
-      _result = await _layerManager.init(_app, cfg, effectHandler);
+      const factories = createPixiFactories();
+      _layerManager = createLayerCreatorManager(factories.spriteFactory);
+      _result = await _layerManager.init(_app, cfg, factories.effectHandler);
 
       // Add the container to the stage
       _app.stage.addChild(_result.container as Container);
@@ -1577,7 +1580,6 @@ export function createPixiEngine(): PixiEngine {
 // Export functions and default component for external use
 // ===================================================================
 
-export { createLayerCreatorManager as createCreatorManager, createPixiEngine as createEngine };
 
 // Export utilities for external access
 export {
