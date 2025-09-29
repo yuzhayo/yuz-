@@ -1,9 +1,11 @@
 import React from "react";
-import { MainScreenBtnPanel } from "./MainScreenBtn";
-import { useMainScreenBtnGesture } from "./MainScreenBtnGesture";
-import MainScreenRendererBadge from "./MainScreenRendererBadge";
-import MainScreenUpdater from "./MainScreenUpdater";
-import MainScreenApiTester from "./MainScreenApiTester";
+import {
+  MainScreenBtnPanel,
+  useMainScreenBtnGesture,
+  MainScreenRendererBadge,
+  MainScreenUpdater,
+  MainScreenApiTester,
+} from "./MainScreenUtils";
 import { LogicStage } from "./logic/LayerCreator";
 import type { RendererMode } from "./logic/LayerCreator";
 import logicConfigJson from "./LogicConfig";
@@ -24,9 +26,9 @@ export default function MainScreen(_props: MainScreenProps) {
     <div className="relative w-screen h-screen overflow-hidden">
       {/* Pixi renderer canvas behind UI */}
       <div className="absolute inset-0">
-        <LogicStage 
+        <LogicStage
           buildSceneFromLogic={async (app: any, config: any) => {
-            const { buildSceneFromLogic } = await import('./logic/LayerCreator');
+            const { buildSceneFromLogic } = await import("./logic/LayerCreator");
             return buildSceneFromLogic(app, config);
           }}
           logicConfig={logicConfigJson as LogicConfig}
