@@ -21,7 +21,7 @@ export default function MainScreen(_props: MainScreenProps) {
   const gesture = useMainScreenBtnGesture();
   const label = "Renderer: Pixi";
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-slate-900 to-slate-800">
+    <div className="relative w-screen h-screen overflow-hidden">
       {/* Pixi renderer canvas behind UI */}
       <div className="absolute inset-0">
         <LogicStage 
