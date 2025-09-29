@@ -1,4 +1,4 @@
-﻿# Logic Pipeline Migration Plan
+# Logic Pipeline Migration Plan
 
 This document outlines how we replicate the current launcher workflow while introducing a new pipeline, leaving the existing files untouched as the legacy reference.
 
@@ -18,6 +18,7 @@ shared/stages/newPipeline/
 ## LayerConfig.ts (Loader / Schema)
 
 - Copy JSON loader and asset remapping logic from `Launcher/src/LogicConfig.ts`.
+- Decide where the source JSON lives: either keep using `Launcher/src/LogicConfig.json` or copy it to `shared/stages/newPipeline/LayerConfig.json` so the new loader can resolve assets independently.
 - Define and export the schema types from `LayerCreator.ts` that describe the config:
   - `ImageRegistry`, `ImageRef`, `LayerConfig`, `LogicConfig`, and (optionally) `LayerModule`.
 - Import schema fragments referenced inside `LayerConfig` so the config remains typesafe:
@@ -75,3 +76,4 @@ shared/stages/newPipeline/
 - Keep `logic/math.ts` for shared math helpers; the new modules can re-export or import them as needed.
 - No legacy code is removed during this migration, making it easy to diff or rollback.
 - After confidence is gained, you can consider pruning or consolidating legacy modules.
+
