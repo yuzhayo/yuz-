@@ -13,24 +13,38 @@
  * 🟢 UTILITY blocks provide math helpers and can be deleted.
  */
 
-// Import all contracts and utilities from centralized location
-import { STAGE_WIDTH, STAGE_HEIGHT, clamp, clamp01, toRad, normDeg, clampRpm60, warn, debug, error } from "./LayerCreator";
-import type { 
-  GenericApplication, 
-  GenericSprite, 
-  BuiltLayer, 
-  LayerConfig,
-  StandardLayerManager,
-  LayerModuleInitConfig,
-  LayerModuleResult,
-  LayerModulePerformance
-} from "./LayerCreator";
+// Import all contracts from centralized location
+import { STAGE_WIDTH, STAGE_HEIGHT } from "./LayerCreator";
+import type { GenericApplication, GenericSprite, BuiltLayer, LayerConfig } from "./LayerCreator";
 
 // ===================================================================
-// 🟢 BLOCK 1: ORBIT-SPECIFIC GEOMETRY FUNCTIONS
+// 🟢 BLOCK 1: UTILITY MATH AND GEOMETRY FUNCTIONS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
-// These are orbit-specific helper functions (general utilities imported from LayerCreator)
+// These are helper functions for math operations and geometry calculations
 // ===================================================================
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function clamp01(n: number): number {
+  return clamp(n, 0, 1);
+}
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function normDeg(deg: number): number {
+  const d = deg % 360;
+  return d < 0 ? d + 360 : d;
+}
+
+function clampRpm60(v: unknown): number {
+  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.min(60, Math.max(0, n));
+}
 
 /**
  * Projects a point to the border of a rectangle, finding the intersection
@@ -212,43 +226,22 @@ function normalizeOrientDegrees(orientDeg: number | null | undefined): number {
 // ===================================================================
 
 // Engine-agnostic orbit manager for orbital motion
-export interface LayerOrbitManager extends StandardLayerManager {
-  // Standardized lifecycle methods with consistent signatures
-  init(config: LayerModuleInitConfig): LayerModuleResult;
-  tick(elapsed: number): LayerModuleResult;
-  recompute(): LayerModuleResult;
-  dispose(): LayerModuleResult;
-  
-  // Manager-specific methods
+export interface LayerOrbitManager {
+  init(
+    app: GenericApplication,
+    built: BuiltLayer[],
+    spinRpmBySprite?: Map<GenericSprite, number>,
+  ): void;
+  tick(elapsed: number): void;
+  recompute(elapsed: number): void;
+  dispose(): void;
   getItems(): OrbitItem[];
-  
-  // Required metadata properties
-  readonly name: string;
-  readonly version: string;
-  readonly isRequired: boolean;
-  readonly hasActiveItems: boolean;
-  readonly itemCount: number;
-  readonly isInitialized: boolean;
-  
-  // Performance and validation
-  getPerformanceStats(): Record<string, number>;
-  validateConfiguration(): LayerModuleResult<boolean>;
 }
 
 // Create orbit manager
 export function createLayerOrbitManager(): LayerOrbitManager {
   const items: OrbitItem[] = [];
   let _app: GenericApplication | null = null;
-  let _isInitialized = false;
-  let _performance: LayerModulePerformance = {};
-  let _spinRpmBySprite: Map<GenericSprite, number> = new Map();
-  const _performanceStats = {
-    initTime: 0,
-    tickTime: 0,
-    recomputeTime: 0,
-    itemCount: 0,
-    lastTickDuration: 0
-  };
 
   // ===================================================================
   // 🔴 BLOCK 5: CORE IMPLEMENTATION
@@ -256,260 +249,135 @@ export function createLayerOrbitManager(): LayerOrbitManager {
   // Main orbital motion processing logic
   // ===================================================================
 
-  const manager: LayerOrbitManager = {
-    // Required metadata properties
-    name: "LayerOrbitManager",
-    version: "2.0.0",
-    isRequired: false,
-    
-    get hasActiveItems(): boolean {
-      return items.length > 0;
-    },
-    
-    get itemCount(): number {
-      return items.length;
-    },
-    
-    get isInitialized(): boolean {
-      return _isInitialized;
-    },
-    init(config: LayerModuleInitConfig): LayerModuleResult {
-      const startTime = performance.now();
-      const warnings: string[] = [];
-      
-      try {
-        // Validate input configuration
-        if (!config.app) {
-          return { success: false, error: "Missing application instance" };
-        }
-        if (!config.layers || !Array.isArray(config.layers)) {
-          return { success: false, error: "Missing or invalid layers array" };
-        }
+  return {
+    init(
+      application: GenericApplication,
+      built: BuiltLayer[],
+      spinRpmBySprite?: Map<GenericSprite, number>,
+    ) {
+      _app = application;
+      items.length = 0;
 
-        _app = config.app;
-        _performance = config.performance || {};
-        items.length = 0;
-        _isInitialized = false;
-        _spinRpmBySprite = (config.dependencies?.spinRpmBySprite instanceof Map) 
-          ? config.dependencies.spinRpmBySprite 
-          : new Map();
+      for (const b of built) {
+        // Only handle basic orbital motion (clock-driven orbit is handled by LayerClock)
+        if (!b.cfg.clock?.enabled) {
+          const rpm = clampRpm60(b.cfg.orbitRPM);
+          if (rpm <= 0) continue;
 
-        // Process each layer with error handling
-        for (const b of config.layers) {
-          try {
-            // Only handle basic orbital motion (clock-driven orbit is handled by LayerClock)
-            if (!b.cfg.clock?.enabled) {
-              const rpm = clampRpm60(b.cfg.orbitRPM);
-              if (rpm <= 0) continue;
+          const orbitCenter = b.cfg.orbitCenter || DEFAULT_ORBIT_CENTER;
+          const centerPct = clampOrbitCenter(orbitCenter);
+          const dir = normalizeOrbitDirection(b.cfg.orbitDir);
 
-              const orbitCenter = b.cfg.orbitCenter || DEFAULT_ORBIT_CENTER;
-              const centerPct = clampOrbitCenter(orbitCenter);
-              const dir = normalizeOrbitDirection(b.cfg.orbitDir);
-
-              const w = STAGE_WIDTH;
-              const h = STAGE_HEIGHT;
-              const centerPx = calculateOrbitCenter(centerPct, w, h);
-              const radius = calculateOrbitRadius(
-                centerPx,
-                { xPct: b.cfg.position?.xPct ?? 0, yPct: b.cfg.position?.yPct ?? 0 },
-                w,
-                h,
-              );
-
-              if (radius <= 0) continue;
-
-              const basePhase = calculateOrbitPhase(
-                centerPx,
-                { xPct: b.cfg.position?.xPct ?? 0, yPct: b.cfg.position?.yPct ?? 0 },
-                b.cfg.orbitPhaseDeg,
-                w,
-                h,
-              );
-
-              const radPerSec = rpmToRadPerSec(rpm);
-              const orientPolicy = normalizeOrientPolicy(b.cfg.orbitOrientPolicy);
-              const orientDegRad = normalizeOrientDegrees(b.cfg.orbitOrientDeg);
-              const spinRpm = _spinRpmBySprite.get(b.sprite) ?? 0;
-
-              items.push({
-                sprite: b.sprite,
-                cfg: b.cfg,
-                dir,
-                radPerSec,
-                centerPct,
-                centerPx,
-                radius,
-                basePhase,
-                orientPolicy,
-                orientDegRad,
-                spinRpm,
-              });
-            }
-          } catch (e) {
-            const errorMsg = `Failed to create orbit item for layer ${b.id}: ${e}`;
-            warn("LayerOrbit", errorMsg);
-            warnings.push(errorMsg);
-          }
-        }
-
-        _isInitialized = true;
-        _performanceStats.initTime = performance.now() - startTime;
-        _performanceStats.itemCount = items.length;
-
-        debug("LayerOrbit", `Initialized with ${items.length} orbit items`);
-        
-        return { 
-          success: true, 
-          warnings: warnings.length > 0 ? warnings : undefined,
-          data: undefined
-        };
-      } catch (e) {
-        error("LayerOrbit", `Initialization failed: ${e}`);
-        return { success: false, error: `Initialization failed: ${e}` };
-      }
-    },
-
-    tick(elapsed: number): LayerModuleResult {
-      if (!_isInitialized) {
-        return { success: false, error: "Manager not initialized" };
-      }
-
-      // Early return optimization
-      if (_performance.enableEarlyReturns && items.length === 0) {
-        return { success: true };
-      }
-
-      const startTime = performance.now();
-      
-      try {
-        // Performance limit check
-        const maxTime = _performance.maxProcessingTimeMs || 16; // Default 16ms (60fps)
-        
-        for (const item of items) {
-          if (item.radius <= 0) continue;
-
-          const angle = item.basePhase + item.dir * item.radPerSec * elapsed;
-          item.sprite.x = item.centerPx.cx + item.radius * Math.cos(angle);
-          item.sprite.y = item.centerPx.cy + item.radius * Math.sin(angle);
-
-          // Handle orientation policy
-          if (
-            item.orientPolicy === "override" ||
-            (item.orientPolicy === "auto" && item.spinRpm <= 0)
-          ) {
-            item.sprite.rotation = angle + item.orientDegRad;
-          }
-        }
-        
-        const duration = performance.now() - startTime;
-        _performanceStats.lastTickDuration = duration;
-        
-        if (duration > maxTime && _performance.debugMode) {
-          warn("LayerOrbit", `Tick duration ${duration}ms exceeded limit ${maxTime}ms`);
-        }
-
-        return { success: true };
-      } catch (e) {
-        error("LayerOrbit", `Tick failed: ${e}`);
-        return { success: false, error: `Tick failed: ${e}` };
-      }
-    },
-
-    recompute(): LayerModuleResult {
-      if (!_isInitialized) {
-        return { success: false, error: "Manager not initialized" };
-      }
-
-      const startTime = performance.now();
-      
-      try {
-        const w = STAGE_WIDTH;
-        const h = STAGE_HEIGHT;
-
-        for (const item of items) {
-          // Store current angle to maintain continuity
-          const oldAngle = Math.atan2(
-            item.sprite.y - item.centerPx.cy,
-            item.sprite.x - item.centerPx.cx,
-          );
-
-          // Recalculate center and radius based on current stage dimensions
-          const centerPx = calculateOrbitCenter(item.centerPct, w, h);
+          const w = STAGE_WIDTH;
+          const h = STAGE_HEIGHT;
+          const centerPx = calculateOrbitCenter(centerPct, w, h);
           const radius = calculateOrbitRadius(
             centerPx,
-            { xPct: item.cfg.position?.xPct ?? 0, yPct: item.cfg.position?.yPct ?? 0 },
+            { xPct: b.cfg.position?.xPct ?? 0, yPct: b.cfg.position?.yPct ?? 0 },
             w,
             h,
           );
 
-          item.centerPx = centerPx;
-          item.radius = radius;
+          if (radius <= 0) continue;
 
-          if (radius > 0) {
-            // For recompute, we maintain current visual position by not adjusting basePhase
-            // Update sprite position immediately based on new dimensions
-            item.sprite.x = centerPx.cx + radius * Math.cos(oldAngle);
-            item.sprite.y = centerPx.cy + radius * Math.sin(oldAngle);
-          }
+          const basePhase = calculateOrbitPhase(
+            centerPx,
+            { xPct: b.cfg.position?.xPct ?? 0, yPct: b.cfg.position?.yPct ?? 0 },
+            b.cfg.orbitPhaseDeg,
+            w,
+            h,
+          );
+
+          const radPerSec = rpmToRadPerSec(rpm);
+          const orientPolicy = normalizeOrientPolicy(b.cfg.orbitOrientPolicy);
+          const orientDegRad = normalizeOrientDegrees(b.cfg.orbitOrientDeg);
+          const spinRpm = spinRpmBySprite?.get(b.sprite) ?? 0;
+
+          items.push({
+            sprite: b.sprite,
+            cfg: b.cfg,
+            dir,
+            radPerSec,
+            centerPct,
+            centerPx,
+            radius,
+            basePhase,
+            orientPolicy,
+            orientDegRad,
+            spinRpm,
+          });
         }
-        
-        _performanceStats.recomputeTime = performance.now() - startTime;
-        debug("LayerOrbit", `Recomputed ${items.length} orbit items`);
-        
-        return { success: true };
-      } catch (e) {
-        error("LayerOrbit", `Recompute failed: ${e}`);
-        return { success: false, error: `Recompute failed: ${e}` };
       }
     },
 
-    dispose(): LayerModuleResult {
-      try {
-        items.length = 0;
-        _app = null;
-        _isInitialized = false;
-        _spinRpmBySprite.clear();
-        
-        // Clear performance stats
-        _performanceStats.initTime = 0;
-        _performanceStats.tickTime = 0;
-        _performanceStats.recomputeTime = 0;
-        _performanceStats.itemCount = 0;
-        _performanceStats.lastTickDuration = 0;
-        
-        debug("LayerOrbit", "Manager disposed successfully");
-        return { success: true };
-      } catch (e) {
-        error("LayerOrbit", `Dispose failed: ${e}`);
-        return { success: false, error: `Dispose failed: ${e}` };
+    tick(elapsed: number) {
+      for (const item of items) {
+        if (item.radius <= 0) continue;
+
+        const angle = item.basePhase + item.dir * item.radPerSec * elapsed;
+        item.sprite.x = item.centerPx.cx + item.radius * Math.cos(angle);
+        item.sprite.y = item.centerPx.cy + item.radius * Math.sin(angle);
+
+        // Handle orientation policy
+        if (
+          item.orientPolicy === "override" ||
+          (item.orientPolicy === "auto" && item.spinRpm <= 0)
+        ) {
+          item.sprite.rotation = angle + item.orientDegRad;
+        }
       }
     },
+
+    recompute(elapsed: number) {
+      const w = STAGE_WIDTH;
+      const h = STAGE_HEIGHT;
+
+      for (const item of items) {
+        // Store current angle to maintain continuity
+        const oldAngle = Math.atan2(
+          item.sprite.y - item.centerPx.cy,
+          item.sprite.x - item.centerPx.cx,
+        );
+
+        // Recalculate center and radius based on current stage dimensions
+        const centerPx = calculateOrbitCenter(item.centerPct, w, h);
+        const radius = calculateOrbitRadius(
+          centerPx,
+          { xPct: item.cfg.position?.xPct ?? 0, yPct: item.cfg.position?.yPct ?? 0 },
+          w,
+          h,
+        );
+
+        item.centerPx = centerPx;
+        item.radius = radius;
+
+        if (radius > 0) {
+          // Adjust base phase to maintain current position
+          const currentBase = oldAngle;
+          item.basePhase = currentBase - item.dir * item.radPerSec * elapsed;
+
+          // Update sprite position immediately
+          item.sprite.x = centerPx.cx + radius * Math.cos(currentBase);
+          item.sprite.y = centerPx.cy + radius * Math.sin(currentBase);
+        }
+      }
+    },
+
+    dispose() {
+      items.length = 0;
+      _app = null;
+    },
+
+    // ===================================================================
+    // 🟡 BLOCK 6: DIAGNOSTICS AND UTILITIES
+    // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes diagnostics)
+    // Provides debugging and inspection capabilities
+    // ===================================================================
 
     getItems(): OrbitItem[] {
       return [...items];
     },
-
-    getPerformanceStats(): Record<string, number> {
-      return { ..._performanceStats };
-    },
-
-    validateConfiguration(): LayerModuleResult<boolean> {
-      try {
-        const isValid = _isInitialized && _app !== null;
-        return { 
-          success: true, 
-          data: isValid 
-        };
-      } catch (e) {
-        return { 
-          success: false, 
-          error: `Validation failed: ${e}` 
-        };
-      }
-    }
   };
-
-  return manager;
 }
 
 // ===================================================================

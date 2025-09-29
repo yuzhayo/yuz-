@@ -29,11 +29,11 @@ import { Application, Assets, Container, Sprite } from "pixi.js";
 import { createLayerSpinManager } from "./LayerSpin";
 import type { LayerSpinManager } from "./LayerSpin";
 import { createLayerClockManager } from "./LayerClock";
-import type { LayerClockManager, ClockConfig } from "./LayerClock";
+import type { LayerClockManager } from "./LayerClock";
 import { createLayerOrbitManager } from "./LayerOrbit";
 import type { LayerOrbitManager } from "./LayerOrbit";
 import { createLayerEffectManager } from "./LayerEffect";
-import type { LayerEffectManager, EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec, LayerEffectConfig } from "./LayerEffect";
+import type { LayerEffectManager, EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec } from "./LayerEffect";
 
 // Re-export imported types for backward compatibility
 export type { EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec };
@@ -48,71 +48,6 @@ export type { EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec };
 export type ImageRegistry = Record<string, string>;
 export type ImageRef = { kind: "urlId"; id: string } | { kind: "url"; url: string };
 export type RendererMode = "pixi";
-
-// === TYPE GUARDS AND SPRITE INTERFACES ===
-
-// Enhanced sprite interface with optional Pixi-specific properties
-export interface PixiSprite extends GenericSprite {
-  anchor?: {
-    set?: (x: number, y?: number) => void;
-  };
-  texture?: {
-    width?: number;
-    height?: number;
-    orig?: { width?: number; height?: number };
-  };
-  width?: number;
-  height?: number;
-}
-
-// Enhanced container interface with optional Pixi-specific properties
-export interface PixiContainer extends GenericContainer {
-  sortableChildren?: boolean;
-  destroy?: (options?: { children?: boolean }) => void;
-  _cleanup?: () => void;
-}
-
-// Type guards for safe property access
-export function hasAnchor(sprite: GenericSprite): sprite is PixiSprite {
-  return typeof (sprite as PixiSprite).anchor?.set === 'function';
-}
-
-export function hasTexture(sprite: GenericSprite): sprite is PixiSprite {
-  return 'texture' in sprite && typeof (sprite as PixiSprite).texture === 'object';
-}
-
-export function hasScaleSet(sprite: GenericSprite): sprite is GenericSprite & { scale: { set: (x: number, y: number) => void } } {
-  return typeof sprite.scale === 'object' && 'set' in sprite.scale && typeof sprite.scale.set === 'function';
-}
-
-export function hasTicker(app: GenericApplication): app is GenericApplication & { ticker: NonNullable<GenericApplication['ticker']> } {
-  return app.ticker !== undefined && app.ticker !== null;
-}
-
-export function hasPixiTicker(app: GenericApplication): boolean {
-  return hasTicker(app) && typeof app.ticker.add === 'function' && typeof app.ticker.remove === 'function';
-}
-
-export function hasSortableChildren(container: GenericContainer): container is PixiContainer {
-  return 'sortableChildren' in container;
-}
-
-export function hasCleanup(container: GenericContainer): container is PixiContainer {
-  return '_cleanup' in container && typeof (container as PixiContainer)._cleanup === 'function';
-}
-
-export function hasDestroy(obj: unknown): obj is { destroy: (options?: unknown) => void } {
-  return typeof obj === 'object' && obj !== null && 'destroy' in obj && typeof (obj as any).destroy === 'function';
-}
-
-// Safe global property access
-export function isDevelopmentMode(): boolean {
-  try {
-    return typeof window !== 'undefined' && Boolean((window as { __DEV__?: boolean }).__DEV__);
-  } catch {
-    return false;
-  }
-}
 
 // Engine-agnostic interfaces for cross-renderer compatibility
 export interface GenericSprite {
@@ -133,32 +68,12 @@ export interface GenericContainer {
   children: GenericSprite[];
 }
 
-// Type guards for better application type checking
-type PixiLikeTicker = {
-  deltaMS?: number;
-  add?: (fn: () => void) => void;
-  remove?: (fn: () => void) => void;
-};
-
-type PixiLikeRenderer = {
-  type?: string | number;
-  gl?: WebGLRenderingContext | WebGL2RenderingContext | null;
-};
-
-type PixiLikeApplication = {
-  ticker?: PixiLikeTicker;
-  renderer?: PixiLikeRenderer;
-  view?: HTMLCanvasElement;
-  stage?: { addChild?: (child: unknown) => void; removeChild?: (child: unknown) => void };
-  destroy?: (options?: unknown) => void;
-};
-
 export interface GenericApplication {
-  ticker?: PixiLikeTicker;
-  renderer?: PixiLikeRenderer;
-  view?: HTMLCanvasElement | unknown; // Allow for different canvas types
-  stage?: { addChild?: (child: unknown) => unknown; removeChild?: (child: unknown) => void };
-  destroy?: (options?: unknown) => void;
+  ticker?: {
+    deltaMS?: number;
+    add?: (fn: () => void) => void;
+    remove?: (fn: () => void) => void;
+  };
 }
 
 // Layer configuration schema
@@ -179,8 +94,8 @@ export type LayerConfig = {
   orbitOrientPolicy?: "none" | "auto" | "override";
   orbitOrientDeg?: number | null;
   // Clock and effects
-  clock?: ClockConfig | null;
-  effects?: LayerEffectConfig | null;
+  clock?: any;
+  effects?: any;
 };
 
 // Build result types
@@ -203,69 +118,13 @@ export type LogicConfig = {
 
 // === MODULE CAPABILITY INTERFACES ===
 
-// Error result type for consistent error handling
-export type LayerModuleResult<T = void> = {
-  success: boolean;
-  data?: T;
-  error?: string;
-  warnings?: string[];
-};
-
-// Performance configuration for optimization
-export interface LayerModulePerformance {
-  enableOptimizations?: boolean;
-  enableEarlyReturns?: boolean;
-  maxProcessingTimeMs?: number;
-  debugMode?: boolean;
-}
-
-// Initialization configuration for managers
-export interface LayerModuleInitConfig {
-  app: GenericApplication;
-  layers: BuiltLayer[];
-  performance?: LayerModulePerformance;
-  dependencies?: Record<string, unknown>;
-}
-
-// Base interface all managers must implement for consistency
+// Base interface all optional modules must implement
 export interface LayerModule {
-  // Core lifecycle methods - consistent across all managers
-  init(config: LayerModuleInitConfig): LayerModuleResult;
-  tick(elapsed: number): LayerModuleResult;
-  recompute(): LayerModuleResult;
-  dispose(): LayerModuleResult;
-  
-  // Metadata and status
-  readonly name: string;
-  readonly version: string;
-  readonly isRequired: boolean; // true = critical, false = optional
-  readonly hasActiveItems: boolean;
-  
-  // Performance and diagnostics
-  getPerformanceStats?(): Record<string, number>;
-  validateConfiguration?(): LayerModuleResult<boolean>;
-  
-  // Manager-specific data access (standardized return type)
-  getItems(): readonly unknown[]; // Each manager defines its own item type, but returns should be readonly
-}
-
-// Enhanced manager interface for standardized layer managers
-export interface StandardLayerManager extends LayerModule {
-  // Standard manager methods with consistent signatures
-  init(config: LayerModuleInitConfig): LayerModuleResult;
-  tick(elapsed: number): LayerModuleResult;
-  recompute(): LayerModuleResult;
-  dispose(): LayerModuleResult;
-  
-  // Error handling and validation
-  validateConfiguration(): LayerModuleResult<boolean>;
-  
-  // Performance optimization
-  getPerformanceStats(): Record<string, number>;
-  
-  // Manager state
-  readonly itemCount: number;
-  readonly isInitialized: boolean;
+  init(...args: any[]): Promise<void> | void;
+  tick?(elapsed: number): void;
+  recompute?(): void;
+  dispose?(): void;
+  isRequired: boolean; // true = critical, false = optional
 }
 
 // Sprite factory interface for renderer abstraction
@@ -345,589 +204,6 @@ export interface PixiEngine {
   getContainer(): GenericContainer | null;
   getLayers(): BuiltLayer[];
   hasAnimations(): boolean;
-}
-
-// ===================================================================
-// 🟢 BLOCK 1.5: UNIFIED UTILITY FUNCTIONS & PERFORMANCE OPTIMIZATIONS
-// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete (math helpers only, no visual impact)
-// Consolidated utility functions from all Layer modules to eliminate duplication
-// + Performance caches, throttling, and optimization mechanisms
-// ===================================================================
-
-// === ANGLE CONVERSION UTILITIES ===
-
-/**
- * Convert degrees to radians
- */
-export function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-/**
- * Convert radians to degrees
- */
-export function toDeg(rad: number): number {
-  return (rad * 180) / Math.PI;
-}
-
-/**
- * Normalize degrees to 0-360 range
- */
-export function normDeg(deg: number): number {
-  const d = deg % 360;
-  return d < 0 ? d + 360 : d;
-}
-
-// === CLAMPING AND VALIDATION UTILITIES ===
-
-/**
- * Clamp a number between min and max values
- */
-export function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-/**
- * Clamp a number between 0 and 1
- */
-export function clamp01(n: number): number {
-  return clamp(n, 0, 1);
-}
-
-/**
- * Clamp RPM values to valid range (0-60 RPM)
- * Handles various input types safely
- */
-export function clampRpm60(v: unknown): number {
-  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
-  if (!isFinite(n) || n <= 0) return 0;
-  return Math.min(60, Math.max(0, n));
-}
-
-// === SAFE CONVERSION UTILITIES ===
-
-/**
- * Safely convert value to number with fallback
- */
-export function safeNumber(value: unknown, fallback: number = 0): number {
-  if (typeof value === "number" && isFinite(value)) return value;
-  if (value == null) return fallback;
-  const converted = Number(value);
-  return isFinite(converted) ? converted : fallback;
-}
-
-/**
- * Safely get percentage value (0-100) with fallback
- */
-export function safePct(value: unknown, fallback: number = 0): number {
-  return clamp(safeNumber(value, fallback), 0, 100);
-}
-
-// === ERROR HANDLING AND LOGGING UTILITIES ===
-
-/**
- * Debug logging utility - only logs in development
- */
-export function debug(context: string, message: string, ...args: unknown[]): void {
-  if (isDevelopmentMode()) {
-    console.log(`[${context}] ${message}`, ...args);
-  }
-}
-
-/**
- * Warning logging utility - always logs warnings
- */
-export function warn(context: string, message: string, ...args: unknown[]): void {
-  console.warn(`[${context}] ${message}`, ...args);
-}
-
-/**
- * Error logging utility - always logs errors
- */
-export function error(context: string, message: string, ...args: unknown[]): void {
-  console.error(`[${context}] ${message}`, ...args);
-}
-
-// === NULL SAFETY UTILITIES ===
-
-/**
- * Check if value is valid number (not null, undefined, NaN, or Infinity)
- */
-export function isValidNumber(value: unknown): value is number {
-  return typeof value === "number" && isFinite(value);
-}
-
-/**
- * Check if value is valid non-empty string
- */
-export function isValidString(value: unknown): value is string {
-  return typeof value === "string" && value.length > 0;
-}
-
-/**
- * Safe object property access with type checking
- */
-export function safeGet<T>(obj: any, key: string, validator: (val: unknown) => val is T, fallback: T): T {
-  if (obj && typeof obj === "object" && key in obj) {
-    const value = obj[key];
-    if (validator(value)) return value;
-  }
-  return fallback;
-}
-
-// === GEOMETRY UTILITIES ===
-
-/**
- * Ensure value is within bounds with wraparound for angles
- */
-export function wrapAngle(angleDeg: number): number {
-  return normDeg(angleDeg);
-}
-
-/**
- * Linear interpolation between two values
- */
-export function lerp(a: number, b: number, t: number): number {
-  return a + (b - a) * clamp01(t);
-}
-
-/**
- * Check if two numbers are approximately equal within tolerance
- */
-export function approximately(a: number, b: number, tolerance: number = 1e-6): boolean {
-  return Math.abs(a - b) <= tolerance;
-}
-
-// ===================================================================
-// 🚀 PERFORMANCE OPTIMIZATION UTILITIES
-// ⚠️  AI AGENT: PERFORMANCE BLOCK - Critical for performance
-// Caching, throttling, and optimization mechanisms
-// ===================================================================
-
-// === CACHING MECHANISMS ===
-
-// Cache for expensive transform calculations
-const _transformCache = new Map<string, { width: number; height: number; transform: StageTransform; timestamp: number }>();
-const TRANSFORM_CACHE_TTL = 100; // 100ms cache TTL
-
-// Cache for geometry computations
-const _geometryCache = new Map<string, { result: any; timestamp: number }>();
-const GEOMETRY_CACHE_TTL = 500; // 500ms cache TTL
-
-// Cache for configuration parsing
-const _configCache = new WeakMap<object, { result: any; timestamp: number }>();
-
-// Cache for asset loading promises
-const _assetCache = new Map<string, Promise<any>>();
-
-/**
- * Cached transform calculation with TTL invalidation
- */
-export function getCachedTransform(width: number, height: number): StageTransform {
-  const key = `${width}:${height}`;
-  const cached = _transformCache.get(key);
-  const now = performance.now();
-  
-  if (cached && (now - cached.timestamp) < TRANSFORM_CACHE_TTL) {
-    return cached.transform;
-  }
-  
-  try {
-    const transform = calculateStageTransform(width, height);
-    _transformCache.set(key, { width, height, transform, timestamp: now });
-    
-    // Cleanup old cache entries
-    if (_transformCache.size > 50) {
-      for (const [k, v] of _transformCache) {
-        if ((now - v.timestamp) > TRANSFORM_CACHE_TTL * 5) {
-          _transformCache.delete(k);
-        }
-      }
-    }
-    
-    return transform;
-  } catch (e) {
-    error("LayerCreator", `Transform calculation failed: ${e}`);
-    return { scale: 1, offsetX: 0, offsetY: 0, containerWidth: width, containerHeight: height };
-  }
-}
-
-/**
- * Cached geometry computation with TTL invalidation
- */
-export function getCachedGeometry<T>(key: string, computeFn: () => T, ttl: number = GEOMETRY_CACHE_TTL): T {
-  const cached = _geometryCache.get(key);
-  const now = performance.now();
-  
-  if (cached && (now - cached.timestamp) < ttl) {
-    return cached.result;
-  }
-  
-  try {
-    const result = computeFn();
-    _geometryCache.set(key, { result, timestamp: now });
-    
-    // Cleanup old cache entries
-    if (_geometryCache.size > 100) {
-      for (const [k, v] of _geometryCache) {
-        if ((now - v.timestamp) > ttl * 3) {
-          _geometryCache.delete(k);
-        }
-      }
-    }
-    
-    return result;
-  } catch (e) {
-    error("LayerCreator", `Geometry computation failed for key ${key}: ${e}`);
-    throw e;
-  }
-}
-
-/**
- * Cached configuration parsing
- */
-export function getCachedConfig<T>(config: object, parseFn: (config: object) => T): T {
-  const cached = _configCache.get(config);
-  const now = performance.now();
-  
-  if (cached && (now - cached.timestamp) < 1000) { // 1s cache for config
-    return cached.result;
-  }
-  
-  try {
-    const result = parseFn(config);
-    _configCache.set(config, { result, timestamp: now });
-    return result;
-  } catch (e) {
-    error("LayerCreator", `Config parsing failed: ${e}`);
-    throw e;
-  }
-}
-
-/**
- * Cached asset loading with promise reuse
- */
-export function getCachedAsset(url: string, loadFn: (url: string) => Promise<any>): Promise<any> {
-  let cached = _assetCache.get(url);
-  
-  if (!cached) {
-    cached = loadFn(url).catch(e => {
-      // Remove failed promises from cache so they can be retried
-      _assetCache.delete(url);
-      throw e;
-    });
-    _assetCache.set(url, cached);
-  }
-  
-  return cached;
-}
-
-// === THROTTLING AND DEBOUNCING ===
-
-const _throttledFunctions = new Map<string, { fn: Function; lastCall: number; timeout?: number }>();
-const _debouncedFunctions = new Map<string, { fn: Function; timeout: number }>();
-
-/**
- * Throttle function execution using requestAnimationFrame
- */
-export function throttleRAF<T extends (...args: any[]) => any>(key: string, fn: T): T {
-  return ((...args: any[]) => {
-    const entry = _throttledFunctions.get(key);
-    const now = performance.now();
-    
-    if (!entry || (now - entry.lastCall) >= 16.67) { // ~60fps
-      if (entry?.timeout) {
-        cancelAnimationFrame(entry.timeout);
-      }
-      
-      const timeout = requestAnimationFrame(() => {
-        _throttledFunctions.set(key, { fn, lastCall: performance.now() });
-        try {
-          fn(...args);
-        } catch (e) {
-          error("LayerCreator", `Throttled function ${key} failed: ${e}`);
-        }
-      });
-      
-      _throttledFunctions.set(key, { fn, lastCall: now, timeout });
-    }
-  }) as T;
-}
-
-/**
- * Debounce function execution
- */
-export function debounce<T extends (...args: any[]) => any>(key: string, fn: T, delay: number = 250): T {
-  return ((...args: any[]) => {
-    const entry = _debouncedFunctions.get(key);
-    
-    if (entry) {
-      clearTimeout(entry.timeout);
-    }
-    
-    const timeout = setTimeout(() => {
-      _debouncedFunctions.delete(key);
-      try {
-        fn(...args);
-      } catch (e) {
-        error("LayerCreator", `Debounced function ${key} failed: ${e}`);
-      }
-    }, delay);
-    
-    _debouncedFunctions.set(key, { fn, timeout });
-  }) as T;
-}
-
-// === RESOURCE MANAGEMENT ===
-
-/**
- * Resource pool for frequently created objects
- */
-class ResourcePool<T> {
-  private pool: T[] = [];
-  private createFn: () => T;
-  private resetFn?: (item: T) => void;
-  private maxSize: number;
-  
-  constructor(createFn: () => T, resetFn?: (item: T) => void, maxSize: number = 50) {
-    this.createFn = createFn;
-    this.resetFn = resetFn;
-    this.maxSize = maxSize;
-  }
-  
-  acquire(): T {
-    const item = this.pool.pop();
-    if (item) {
-      return item;
-    }
-    
-    try {
-      return this.createFn();
-    } catch (e) {
-      error("LayerCreator", `Resource pool creation failed: ${e}`);
-      throw e;
-    }
-  }
-  
-  release(item: T): void {
-    if (this.pool.length < this.maxSize) {
-      try {
-        this.resetFn?.(item);
-        this.pool.push(item);
-      } catch (e) {
-        warn("LayerCreator", `Resource pool reset failed: ${e}`);
-      }
-    }
-  }
-  
-  clear(): void {
-    this.pool.length = 0;
-  }
-  
-  get size(): number {
-    return this.pool.length;
-  }
-}
-
-// Sprite pool for reusing sprite-like objects
-export const spritePool = new ResourcePool(
-  () => ({
-    x: 0, y: 0, rotation: 0, alpha: 1,
-    scale: { x: 1, y: 1, set: function(x: number, y: number) { this.x = x; this.y = y; } },
-    zIndex: 0
-  }),
-  (sprite: any) => {
-    sprite.x = 0; sprite.y = 0; sprite.rotation = 0; sprite.alpha = 1;
-    sprite.scale.x = 1; sprite.scale.y = 1; sprite.zIndex = 0;
-  }
-);
-
-// === ENVIRONMENT DETECTION ===
-
-/**
- * Detect current environment capabilities
- */
-export function detectEnvironment() {
-  const env = {
-    isSSR: typeof window === 'undefined',
-    isBrowser: typeof window !== 'undefined',
-    hasWebGL: false,
-    hasCanvas: false,
-    hasRAF: typeof requestAnimationFrame !== 'undefined',
-    deviceMemory: 4, // Default fallback
-    hardwareConcurrency: 4, // Default fallback
-    isReplit: false
-  };
-  
-  if (env.isBrowser) {
-    try {
-      // WebGL detection
-      const canvas = document.createElement('canvas');
-      env.hasCanvas = !!canvas.getContext;
-      env.hasWebGL = !!(canvas.getContext('webgl') || canvas.getContext('experimental-webgl'));
-      
-      // Hardware capability detection
-      const nav = navigator as any;
-      env.deviceMemory = nav.deviceMemory || 4;
-      env.hardwareConcurrency = nav.hardwareConcurrency || 4;
-      
-      // Replit environment detection (based on common Replit characteristics)
-      env.isReplit = !!(
-        typeof window !== 'undefined' && (
-          window.location.hostname.includes('replit.') ||
-          window.location.hostname.includes('repl.it') ||
-          (window as any).__REPLIT__ ||
-          document.querySelector('meta[name="viewport"][content*="replit"]')
-        )
-      );
-    } catch (e) {
-      warn("LayerCreator", `Environment detection failed: ${e}`);
-    }
-  }
-  
-  return env;
-}
-
-// Cache environment detection result
-let _environmentCache: ReturnType<typeof detectEnvironment> | null = null;
-export function getEnvironment() {
-  if (!_environmentCache) {
-    _environmentCache = detectEnvironment();
-  }
-  return _environmentCache;
-}
-
-// === SAFE ASYNC OPERATIONS ===
-
-/**
- * Execute async operation with timeout and error handling
- */
-export async function safeAsyncOperation<T>(
-  operation: () => Promise<T>,
-  timeoutMs: number = 5000,
-  fallback?: T
-): Promise<T> {
-  try {
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error(`Operation timed out after ${timeoutMs}ms`)), timeoutMs);
-    });
-    
-    const result = await Promise.race([operation(), timeoutPromise]);
-    return result;
-  } catch (e) {
-    error("LayerCreator", `Async operation failed: ${e}`);
-    if (fallback !== undefined) {
-      return fallback;
-    }
-    throw e;
-  }
-}
-
-// === BOUNDS CHECKING UTILITIES ===
-
-/**
- * Safe numeric operation with bounds checking
- */
-export function safeNumericOp<T extends number>(
-  value: unknown, 
-  operation: (n: number) => T, 
-  fallback: T,
-  min?: number,
-  max?: number
-): T {
-  try {
-    const num = safeNumber(value, fallback);
-    
-    if (min !== undefined && num < min) return fallback;
-    if (max !== undefined && num > max) return fallback;
-    
-    const result = operation(num);
-    
-    if (!isFinite(result)) return fallback;
-    if (min !== undefined && result < min) return fallback;
-    if (max !== undefined && result > max) return fallback;
-    
-    return result;
-  } catch {
-    return fallback;
-  }
-}
-
-/**
- * Safe array access with bounds checking
- */
-export function safeArrayAccess<T>(array: T[], index: number, fallback?: T): T | undefined {
-  if (!Array.isArray(array) || index < 0 || index >= array.length) {
-    return fallback;
-  }
-  return array[index];
-}
-
-/**
- * Safe object property access with validation
- */
-export function safeObjectAccess<T>(
-  obj: any, 
-  path: string[], 
-  validator?: (val: unknown) => val is T,
-  fallback?: T
-): T | undefined {
-  if (!obj || typeof obj !== 'object') return fallback;
-  
-  let current = obj;
-  for (const key of path) {
-    if (!current || typeof current !== 'object' || !(key in current)) {
-      return fallback;
-    }
-    current = current[key];
-  }
-  
-  if (validator && !validator(current)) {
-    return fallback;
-  }
-  
-  return current;
-}
-
-// === MEMORY MANAGEMENT ===
-
-/**
- * Clean up caches and pooled resources
- */
-export function cleanupCaches(): void {
-  _transformCache.clear();
-  _geometryCache.clear();
-  spritePool.clear();
-  
-  // Clear throttled function timeouts
-  for (const [key, entry] of _throttledFunctions) {
-    if (entry.timeout) {
-      cancelAnimationFrame(entry.timeout);
-    }
-  }
-  _throttledFunctions.clear();
-  
-  // Clear debounced function timeouts
-  for (const [key, entry] of _debouncedFunctions) {
-    clearTimeout(entry.timeout);
-  }
-  _debouncedFunctions.clear();
-  
-  debug("LayerCreator", "Caches and pools cleaned up");
-}
-
-/**
- * Get memory usage statistics
- */
-export function getMemoryStats() {
-  return {
-    transformCacheSize: _transformCache.size,
-    geometryCacheSize: _geometryCache.size,
-    assetCacheSize: _assetCache.size,
-    spritePoolSize: spritePool.size,
-    throttledFunctions: _throttledFunctions.size,
-    debouncedFunctions: _debouncedFunctions.size
-  };
 }
 
 // ===================================================================
@@ -1051,10 +327,37 @@ export const STAGE_CSS = `
 `.trim();
 
 // ===================================================================
-// 🟢 BLOCK 3: STAGE TRANSFORM FUNCTIONS  
+// 🟢 BLOCK 3: CORE TRANSFORM & MATH FUNCTIONS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
-// Stage coordinate transformations for responsive scaling
+// Math helpers for angle/value conversions and stage transformations
 // ===================================================================
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function toDeg(rad: number): number {
+  return (rad * 180) / Math.PI;
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function clamp01(n: number): number {
+  return clamp(n, 0, 1);
+}
+
+function normDeg(deg: number): number {
+  const d = deg % 360;
+  return d < 0 ? d + 360 : d;
+}
+
+function clampRpm60(v: unknown): number {
+  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
+  if (!isFinite(n) || n <= 0) return 0;
+  return Math.min(60, Math.max(0, n));
+}
 
 /**
  * Calculate stage transform for cover behavior
@@ -1146,7 +449,7 @@ function logicApplyBasicTransform(app: GenericApplication, sp: GenericSprite, cf
   sp.x = (xPct / 100) * w;
   sp.y = (yPct / 100) * h;
   const s = (cfg.scale?.pct ?? 100) / 100;
-  if (hasScaleSet(sp)) {
+  if (typeof sp.scale === "object" && "set" in sp.scale && typeof sp.scale.set === "function") {
     sp.scale.set(s, s);
   } else {
     sp.scale.x = s;
@@ -1488,8 +791,8 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
               this.children.push(child);
             }
           } as GenericContainer;
-      if (_container && hasSortableChildren(_container)) {
-        _container.sortableChildren = true;
+      if (_container && typeof (_container as any).sortableChildren !== "undefined") {
+        (_container as any).sortableChildren = true;
       }
       _layers = [];
 
@@ -1574,8 +877,8 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
           const sprite = await spriteFactory.createSprite(url);
 
           // Set anchor if supported (Pixi-specific)
-          if (hasAnchor(sprite) && sprite.anchor?.set) {
-            sprite.anchor.set(0.5);
+          if (typeof (sprite as any).anchor?.set === "function") {
+            (sprite as any).anchor.set(0.5);
           }
 
           logicApplyBasicTransform(app, sprite, layer);
@@ -1600,10 +903,10 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 
       // Initialize all managers
       const spinManager = createLayerSpinManager();
-      spinManager.init({ app, layers: built });
+      spinManager.init(app, built);
 
       const clockManager = createLayerClockManager();
-      clockManager.init({ app, layers: built });
+      clockManager.init(app, built);
 
       // Build RPM map for orbit system compatibility
       const spinRpmBySprite = new Map<GenericSprite, number>();
@@ -1612,11 +915,11 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       }
 
       const orbitManager = createLayerOrbitManager();
-      orbitManager.init({ app, layers: built, dependencies: { spinRpmBySprite } });
+      orbitManager.init(app, built, spinRpmBySprite);
 
       // Effects (unified system)
       const effectManager = createLayerEffectManager(effectHandler);
-      effectManager.init({ app, layers: built });
+      effectManager.init(app, built);
 
       // Create managers state
       _managersState = {
@@ -1638,7 +941,7 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
         if (_managersState) {
           _managersState.spinManager?.recompute();
           _managersState.clockManager?.recompute();
-          _managersState.orbitManager?.recompute();
+          _managersState.orbitManager?.recompute(_managersState.elapsed);
           _managersState.effectManager?.recompute();
         }
       };
@@ -1661,7 +964,7 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
           return;
         }
 
-        const dt = (hasTicker(app) ? app.ticker.deltaMS || 16.667 : 16.667) / 1000;
+        const dt = ((app as any).ticker?.deltaMS || 16.667) / 1000;
         _managersState.elapsed += dt;
 
         // Basic Spin (handles only basic RPM-based spins)
@@ -1669,9 +972,9 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
         // Orbit
         _managersState.orbitManager?.tick(_managersState.elapsed);
         // Clock (handles clock-driven spins and orbital motion)
-        _managersState.clockManager?.tick(_managersState.elapsed);
+        _managersState.clockManager?.tick();
         // Effects (unified system)
-        _managersState.effectManager?.tick(_managersState.elapsed);
+        _managersState.effectManager?.tick(_managersState.elapsed, built);
       };
 
       _tickFunction = tick;
@@ -1681,23 +984,21 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 
       // Add ticker if we have animations
       try {
-        if (manager.hasAnimations() && hasPixiTicker(app)) {
-          app.ticker!.add!(_tickFunction);
+        if (manager.hasAnimations() && (app as any).ticker?.add) {
+          (app as any).ticker.add(_tickFunction);
         }
       } catch (e) {
         console.error("[LayerCreator] Error adding ticker:", e);
       }
 
       // Set up cleanup on container
-      const prevCleanup = hasCleanup(_container) ? _container._cleanup : undefined;
-      if (_container && 'sortableChildren' in _container) {
-        (_container as PixiContainer)._cleanup = () => {
-          manager.dispose();
-          try {
-            prevCleanup?.();
-          } catch {}
-        };
-      }
+      const prevCleanup = (_container as any)._cleanup as (() => void) | undefined;
+      (_container as any)._cleanup = () => {
+        manager.dispose();
+        try {
+          prevCleanup?.();
+        } catch {}
+      };
 
       return { container: _container, layers: built };
     },
@@ -1720,7 +1021,7 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       if (_managersState) {
         _managersState.spinManager?.recompute();
         _managersState.clockManager?.recompute();
-        _managersState.orbitManager?.recompute();
+        _managersState.orbitManager?.recompute(_managersState.elapsed);
         _managersState.effectManager?.recompute();
       }
     },
@@ -1848,54 +1149,50 @@ export async function createStage2048(
   // Create transform manager
   const transformManager = new StageTransformManager(options.debug);
 
-  // Create Pixi application with FIXED dimensions
-  const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
+  
 
   // Create Pixi application with forced renderer type to avoid auto-detection
   let app: any;
   
-  // Use simple Pixi application with forced canvas renderer for Replit compatibility
+  // Try WebGL first, then fallback to Canvas if needed
   try {
-    console.log("Creating Pixi application with forceCanvas for Replit environment");
     app = new PixiApplication({
       width: STAGE_WIDTH,
       height: STAGE_HEIGHT,
-      backgroundAlpha: options.backgroundAlpha ?? 0.1,
+      backgroundAlpha: options.backgroundAlpha ?? 0.1, // Make slightly visible for debugging
       antialias: options.antialias ?? false,
       autoDensity: false,
-      resolution: 1,
-      hello: false,
-      forceCanvas: true, // This should force canvas renderer in Pixi 7
+      resolution: 1, // Keep simple for compatibility
+      powerPreference: 'low-power', // Use less demanding GPU settings
+      hello: false, // Disable Pixi banner
     });
-  } catch (error) {
-    console.log("forceCanvas failed, trying without renderer specification:", error);
-    // Try without any renderer preference - let Pixi decide what works
+  } catch (webglError) {
     try {
+      // Fallback to Canvas renderer explicitly
+      console.log("WebGL failed, trying Canvas renderer:", webglError);
+      const { Renderer } = await import("pixi.js");
+      app = new PixiApplication({
+        width: STAGE_WIDTH,
+        height: STAGE_HEIGHT,
+        backgroundAlpha: 0.1,
+        hello: false,
+        renderer: new Renderer({
+          width: STAGE_WIDTH,
+          height: STAGE_HEIGHT,
+          view: document.createElement('canvas'),
+          background: '#000000',
+          backgroundAlpha: 0.1,
+        })
+      });
+    } catch (canvasError) {
+      // Final minimal fallback
+      console.log("Canvas renderer also failed, trying minimal configuration:", canvasError);
       app = new PixiApplication({
         width: STAGE_WIDTH,
         height: STAGE_HEIGHT,
         backgroundAlpha: 0.1,
         hello: false,
       });
-    } catch (fallbackError) {
-      console.error("All Pixi configurations failed:", fallbackError);
-      // Create a basic HTML5 Canvas fallback for display
-      const canvas = document.createElement('canvas');
-      canvas.width = STAGE_WIDTH;
-      canvas.height = STAGE_HEIGHT;
-      canvas.style.width = '100%';
-      canvas.style.height = '100%';
-      canvas.style.background = 'rgba(0,0,0,0.1)';
-      
-      // Create a mock Pixi app object for compatibility
-      app = {
-        view: canvas,
-        stage: { addChild: () => {}, removeChild: () => {} },
-        renderer: { render: () => {} },
-        ticker: { add: () => {}, remove: () => {} },
-        destroy: () => {},
-      };
-      console.log("Using fallback HTML5 Canvas for display");
     }
   }
 
@@ -2261,7 +1558,17 @@ export function createEngine(): PixiEngine {
   return createPixiEngine();
 }
 
-// Utility functions are now exported individually in BLOCK 1.5
+// Export utilities for external access
+export {
+  toRad,
+  toDeg,
+  clamp,
+  clamp01,
+  clampRpm60,
+  normDeg,
+  logicZIndexFor,
+  logicApplyBasicTransform,
+};
 
 // Export default for LogicStage
 export default LogicStage;

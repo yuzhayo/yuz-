@@ -13,41 +13,44 @@
  * 🟢 UTILITY blocks provide math helpers and can be deleted.
  */
 
-// Import all contracts and utilities from centralized location
-import { STAGE_WIDTH, STAGE_HEIGHT, toRad, clamp, clamp01, warn, debug, error, hasTexture, hasScaleSet } from "./LayerCreator";
-import type { 
-  GenericSprite, 
-  GenericApplication, 
-  BuiltLayer, 
-  LayerConfig,
-  StandardLayerManager,
-  LayerModuleInitConfig,
-  LayerModuleResult,
-  LayerModulePerformance,
-  PixiSprite
-} from "./LayerCreator";
+// Import all contracts from centralized location
+import { STAGE_WIDTH, STAGE_HEIGHT } from "./LayerCreator";
+import type { GenericSprite, GenericApplication, BuiltLayer, LayerConfig } from "./LayerCreator";
 
 // ===================================================================
-// 🟢 BLOCK 1: CLOCK-SPECIFIC UTILITY FUNCTIONS
+// 🟢 BLOCK 1: UTILITY HELPER FUNCTIONS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
-// These are clock-specific helper functions (general utilities imported from LayerCreator)
+// These are helper functions for angle/value conversions and geometry
 // ===================================================================
+
+function toRad(deg: number): number {
+  return (deg * Math.PI) / 180;
+}
+
+function clamp(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, n));
+}
+
+function _clamp01(n: number): number {
+  return clamp(n, 0, 1);
+}
 
 function getSpriteDimensions(sp: GenericSprite): { width: number; height: number } | null {
+  // Get dimensions from Pixi texture
+  const spriteAny = sp as any;
   let width: number;
   let height: number;
 
   // Pixi.js sprite with texture
-  if (hasTexture(sp)) {
-    const tex = sp.texture;
-    width = tex?.orig?.width ?? tex?.width ?? sp.width ?? 0;
-    height = tex?.orig?.height ?? tex?.height ?? sp.height ?? 0;
+  if (spriteAny.texture) {
+    const tex = spriteAny.texture;
+    width = tex.orig?.width ?? tex.width ?? spriteAny.width;
+    height = tex.orig?.height ?? tex.height ?? spriteAny.height;
   }
   // Fallback to generic width/height
   else {
-    const pixiSprite = sp as PixiSprite;
-    width = pixiSprite.width || 0;
-    height = pixiSprite.height || 0;
+    width = spriteAny.width || 0;
+    height = spriteAny.height || 0;
   }
 
   if (!isFinite(width) || !isFinite(height) || width <= 0 || height <= 0) return null;
@@ -474,27 +477,12 @@ function tickClock(items: ClockItem[]) {
 // Main interface that external code depends on
 // ===================================================================
 
-export interface LayerClockManager extends StandardLayerManager {
-  // Standardized lifecycle methods with consistent signatures
-  init(config: LayerModuleInitConfig): LayerModuleResult;
-  tick(elapsed: number): LayerModuleResult;
-  recompute(): LayerModuleResult;
-  dispose(): LayerModuleResult;
-  
-  // Manager-specific methods
+export interface LayerClockManager {
+  init(app: GenericApplication, built: BuiltLayer[]): void;
+  tick(): void;
+  recompute(): void;
+  dispose(): void;
   getItems(): ClockItem[];
-  
-  // Required metadata properties
-  readonly name: string;
-  readonly version: string;
-  readonly isRequired: boolean;
-  readonly hasActiveItems: boolean;
-  readonly itemCount: number;
-  readonly isInitialized: boolean;
-  
-  // Performance and validation
-  getPerformanceStats(): Record<string, number>;
-  validateConfiguration(): LayerModuleResult<boolean>;
 }
 
 // ===================================================================
@@ -506,183 +494,35 @@ export interface LayerClockManager extends StandardLayerManager {
 export function createLayerClockManager(): LayerClockManager {
   const items: ClockItem[] = [];
   let _app: GenericApplication | null = null;
-  let _isInitialized = false;
-  let _performance: LayerModulePerformance = {};
-  const _performanceStats = {
-    initTime: 0,
-    tickTime: 0,
-    recomputeTime: 0,
-    itemCount: 0,
-    lastTickDuration: 0
-  };
 
-  const manager: LayerClockManager = {
-    // Required metadata properties
-    name: "LayerClockManager",
-    version: "2.0.0",
-    isRequired: false,
-    
-    get hasActiveItems(): boolean {
-      return items.length > 0;
-    },
-    
-    get itemCount(): number {
-      return items.length;
-    },
-    
-    get isInitialized(): boolean {
-      return _isInitialized;
-    },
+  return {
+    init(application: GenericApplication, built: BuiltLayer[]) {
+      _app = application;
+      items.length = 0;
 
-    init(config: LayerModuleInitConfig): LayerModuleResult {
-      const startTime = performance.now();
-      const warnings: string[] = [];
-      
-      try {
-        // Validate input configuration
-        if (!config.app) {
-          return { success: false, error: "Missing application instance" };
-        }
-        if (!config.layers || !Array.isArray(config.layers)) {
-          return { success: false, error: "Missing or invalid layers array" };
-        }
-
-        _app = config.app;
-        _performance = config.performance || {};
-        items.length = 0;
-        _isInitialized = false;
-
-        // Process each layer with error handling
-        for (const layer of config.layers) {
-          try {
-            const item = createClockItem(layer);
-            if (item) {
-              items.push(item);
-            }
-          } catch (e) {
-            const errorMsg = `Failed to create clock item for layer ${layer.id}: ${e}`;
-            warnClock(layer.id, errorMsg);
-            warnings.push(errorMsg);
-          }
-        }
-
-        _isInitialized = true;
-        _performanceStats.initTime = performance.now() - startTime;
-        _performanceStats.itemCount = items.length;
-
-        debug("LayerClock", `Initialized with ${items.length} clock items`);
-        
-        return { 
-          success: true, 
-          warnings: warnings.length > 0 ? warnings : undefined,
-          data: undefined
-        };
-      } catch (e) {
-        error("LayerClock", `Initialization failed: ${e}`);
-        return { success: false, error: `Initialization failed: ${e}` };
+      for (const b of built) {
+        const item = createClockItem(b);
+        if (item) items.push(item);
       }
     },
 
-    tick(elapsed: number): LayerModuleResult {
-      if (!_isInitialized) {
-        return { success: false, error: "Manager not initialized" };
-      }
-
-      // Early return optimization
-      if (_performance.enableEarlyReturns && items.length === 0) {
-        return { success: true };
-      }
-
-      const startTime = performance.now();
-      
-      try {
-        // Performance limit check
-        const maxTime = _performance.maxProcessingTimeMs || 16; // Default 16ms (60fps)
-        
-        tickClock(items);
-        
-        const duration = performance.now() - startTime;
-        _performanceStats.lastTickDuration = duration;
-        
-        if (duration > maxTime && _performance.debugMode) {
-          warn("LayerClock", `Tick duration ${duration}ms exceeded limit ${maxTime}ms`);
-        }
-
-        return { success: true };
-      } catch (e) {
-        error("LayerClock", `Tick failed: ${e}`);
-        return { success: false, error: `Tick failed: ${e}` };
-      }
+    tick() {
+      tickClock(items);
     },
 
-    recompute(): LayerModuleResult {
-      if (!_isInitialized) {
-        return { success: false, error: "Manager not initialized" };
-      }
-
-      const startTime = performance.now();
-      
-      try {
-        for (const item of items) {
-          recomputeItem(item);
-        }
-        
-        _performanceStats.recomputeTime = performance.now() - startTime;
-        debug("LayerClock", `Recomputed ${items.length} clock items`);
-        
-        return { success: true };
-      } catch (e) {
-        error("LayerClock", `Recompute failed: ${e}`);
-        return { success: false, error: `Recompute failed: ${e}` };
-      }
+    recompute() {
+      for (const item of items) recomputeItem(item);
     },
 
-    dispose(): LayerModuleResult {
-      try {
-        items.length = 0;
-        _app = null;
-        _isInitialized = false;
-        
-        // Clear performance stats
-        _performanceStats.initTime = 0;
-        _performanceStats.tickTime = 0;
-        _performanceStats.recomputeTime = 0;
-        _performanceStats.itemCount = 0;
-        _performanceStats.lastTickDuration = 0;
-        
-        debug("LayerClock", "Manager disposed successfully");
-        return { success: true };
-      } catch (e) {
-        error("LayerClock", `Dispose failed: ${e}`);
-        return { success: false, error: `Dispose failed: ${e}` };
-      }
+    dispose() {
+      items.length = 0;
+      _app = null;
     },
 
     getItems(): ClockItem[] {
       return [...items];
     },
-
-    getPerformanceStats(): Record<string, number> {
-      return { ..._performanceStats };
-    },
-
-    validateConfiguration(): LayerModuleResult<boolean> {
-      try {
-        const isValid = _isInitialized && _app !== null;
-        return { 
-          success: true, 
-          data: isValid 
-        };
-      } catch (e) {
-        return { 
-          success: false, 
-          error: `Validation failed: ${e}` 
-        };
-      }
-    }
   };
-
-  return manager;
 }
 
 // ===================================================================
@@ -698,7 +538,7 @@ function warnClock(layerId: string, message: string) {
   const key = `${layerId}:${message}`;
   if (WARNED_CLOCK.has(key)) return;
   WARNED_CLOCK.add(key);
-  warn("LayerClock", `${message} (layer: ${layerId})`);
+  console.warn("[logic][clock]", message, "layer", layerId);
 }
 
 function debugClock(layerId: string, ...data: unknown[]) {
@@ -714,11 +554,11 @@ export function createClockManager(): LayerClockManager {
 // Legacy compatibility function for existing buildClock usage
 export function buildClock(app: GenericApplication, built: BuiltLayer[]) {
   const manager = createLayerClockManager();
-  manager.init({ app, layers: built });
+  manager.init(app, built);
 
   return {
     items: manager.getItems(),
-    tick: (elapsed: number) => manager.tick(elapsed),
+    tick: () => manager.tick(),
     recompute: () => manager.recompute(),
   };
 }

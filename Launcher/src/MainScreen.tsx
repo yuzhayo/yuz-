@@ -6,37 +6,30 @@ import {
   MainScreenUpdater,
   MainScreenApiTester,
 } from "./MainScreenUtils";
-import { LogicStage } from "./logic/LayerCreator";
-import type { RendererMode } from "./logic/LayerCreator";
-import logicConfigJson from "./LogicConfig";
-import type { LogicConfig } from "./logic/LayerCreator";
-
-export type MainScreenProps = {
-  rendererMode?: RendererMode; // 'pixi' (DOM fallback removed)
-};
+import Stage2048System from "./Stage2048System";
 
 /**
- * Layar utama launcher yang menampilkan navigasi dock.
- * Menggunakan Pixi rendering untuk efek visual kosmik.
+ * Simplified without renderer dependencies.
+ */
+export type MainScreenProps = Record<string, never>;
+
+/**
+ * Layar utama yuzha - simplified module display.
+ * Simple display without complex logic system.
  */
 export default function MainScreen(_props: MainScreenProps) {
   const gesture = useMainScreenBtnGesture();
-  const label = "Renderer: Pixi";
+  const label = "Yuzha Module";
+  
   return (
-    <div className="relative w-screen h-screen overflow-hidden">
-      {/* Pixi renderer canvas behind UI */}
-      <div className="absolute inset-0">
-        <LogicStage
-          buildSceneFromLogic={async (app: any, config: any) => {
-            const { buildSceneFromLogic } = await import("./logic/LayerCreator");
-            return buildSceneFromLogic(app, config);
-          }}
-          logicConfig={logicConfigJson as LogicConfig}
-        />
-      </div>
+    <div className="relative w-screen h-screen overflow-hidden bg-black">
+      {/* Stage2048 System - Exact launcher implementation */}
+      <Stage2048System />
+      
       {/* Invisible gesture target */}
-      <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto" />
-      {/* Subtle navigation hint - only show when panel is closed */}
+      <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto z-10" />
+      
+      {/* Navigation hint */}
       {!gesture.open && (
         <div className="absolute top-4 left-4 z-10">
           <div className="bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2 text-sm text-white/70 border border-white/10">
@@ -53,7 +46,8 @@ export default function MainScreen(_props: MainScreenProps) {
         title="Modules"
         target="_self"
       />
-      {/* Renderer badge and updater (hold with launcher) */}
+      
+      {/* Status displays */}
       <MainScreenRendererBadge visible={gesture.open} label={label} />
       <MainScreenApiTester visible={gesture.open} />
       <MainScreenUpdater visible={gesture.open} />
