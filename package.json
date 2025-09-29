@@ -104,5 +104,9 @@
     "**/*.{js,jsx,css,md,json}": [
       "prettier --write"
     ]
+  },
+  "dependencies": {
+    "@types/three": "^0.180.0",
+    "three": "^0.180.0"
   }
 }

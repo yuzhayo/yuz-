@@ -6,6 +6,7 @@ import {
   MainScreenUpdater,
   MainScreenApiTester,
 } from "./MainScreenUtils";
+import Stage3D from "./Stage3D";
 
 export type MainScreenProps = {
   // Simplified without renderer dependencies
@@ -20,15 +21,10 @@ export default function MainScreen(_props: MainScreenProps) {
   const label = "Yuzha Module";
   
   return (
-    <div className="relative w-screen h-screen overflow-hidden bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
-      {/* Simple background */}
-      <div className="absolute inset-0 bg-black/20">
-        {/* Simplified cosmic background */}
-        <div className="absolute inset-0 opacity-30">
-          <div className="absolute top-1/4 left-1/4 w-32 h-32 bg-blue-500/20 rounded-full blur-xl animate-pulse"></div>
-          <div className="absolute top-3/4 right-1/4 w-24 h-24 bg-purple-500/20 rounded-full blur-xl animate-pulse delay-1000"></div>
-          <div className="absolute bottom-1/4 left-1/2 w-16 h-16 bg-pink-500/20 rounded-full blur-xl animate-pulse delay-500"></div>
-        </div>
+    <div className="relative w-screen h-screen overflow-hidden bg-black">
+      {/* 3D Stage Background - Fill entire viewport */}
+      <div className="absolute inset-0">
+        <Stage3D width={2048} height={2048} />
       </div>
       
       {/* Invisible gesture target */}
