@@ -695,45 +695,10 @@ export function createPixiFactories(): { spriteFactory: SpriteFactory; effectHan
 }
 
 // ===================================================================
-// 🟡 BLOCK 8: ANIMATION MANAGERS STATE
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
-// Manages spin, orbit, clock, and effect animations
+// 🔴 BLOCK 8: CORE MANAGER & ANIMATION STATE (MERGED: Block 8 + Block 10)
+// ⚠️  AI AGENT: CRITICAL BLOCK - Core implementation with optional animations
+// Main implementation that creates and manages layers with animation support
 // ===================================================================
-
-// === UNIFIED MANAGER CREATION ===
-export function createAnimationManagers(
-  app: GenericApplication,
-  layers: BuiltLayer[],
-  effectHandler?: EffectHandler,
-): LayerCreatorManagersState {
-  // Initialize all managers
-  const spinManager = createLayerSpinManager();
-  spinManager.init(app, layers);
-
-  const clockManager = createLayerClockManager();
-  clockManager.init(app, layers);
-
-  // Build RPM map for orbit system compatibility
-  const spinRpmBySprite = new Map<GenericSprite, number>();
-  for (const layer of layers) {
-    spinRpmBySprite.set(layer.sprite, spinManager.getSpinRpm(layer.sprite));
-  }
-
-  const orbitManager = createLayerOrbitManager();
-  orbitManager.init(app, layers, spinRpmBySprite);
-
-  // Effects (unified system)
-  const effectManager = createLayerEffectManager(effectHandler);
-  effectManager.init(app, layers);
-
-  return {
-    spinManager,
-    clockManager,
-    orbitManager,
-    effectManager,
-    elapsed: 0,
-  };
-}
 
 export type LayerCreatorItem = {
   id: string;
@@ -770,12 +735,6 @@ export interface LayerCreatorManager {
   getLayers(): BuiltLayer[];
   hasAnimations(): boolean;
 }
-
-// ===================================================================
-// 🔴 BLOCK 10: CORE LAYER CREATOR IMPLEMENTATION
-// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
-// Main implementation that creates and manages layers
-// ===================================================================
 
 export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerCreatorManager {
   let _app: GenericApplication | null = null;
@@ -905,13 +864,33 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 
       _layers = built;
 
-      // ===================================================================
-      // 🟡 BLOCK 11: ANIMATION MANAGERS INITIALIZATION
-      // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
-      // ===================================================================
+      // Initialize animation managers (inlined from former createAnimationManagers)
+      const spinManager = createLayerSpinManager();
+      spinManager.init(app, built);
 
-      // Initialize all managers using unified function
-      _managersState = createAnimationManagers(app, built, effectHandler);
+      const clockManager = createLayerClockManager();
+      clockManager.init(app, built);
+
+      // Build RPM map for orbit system compatibility
+      const spinRpmBySprite = new Map<GenericSprite, number>();
+      for (const layer of built) {
+        spinRpmBySprite.set(layer.sprite, spinManager.getSpinRpm(layer.sprite));
+      }
+
+      const orbitManager = createLayerOrbitManager();
+      orbitManager.init(app, built, spinRpmBySprite);
+
+      // Effects (unified system)
+      const effectManager = createLayerEffectManager(effectHandler);
+      effectManager.init(app, built);
+
+      _managersState = {
+        spinManager,
+        clockManager,
+        orbitManager,
+        effectManager,
+        elapsed: 0,
+      };
 
       // ===================================================================
       // 🟡 BLOCK 12: LIFECYCLE HOOKS (RESIZE/TICKER)
