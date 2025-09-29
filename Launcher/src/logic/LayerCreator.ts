@@ -1107,14 +1107,34 @@ export async function createStage2048(
   const transformManager = new StageTransformManager(options.debug);
 
   const applicationCtor = PixiApplication ?? Application;
-  const app = createPixiApplication(options, applicationCtor, {
+  const baseOverrides: Record<string, unknown> = {
     backgroundAlpha: options.backgroundAlpha ?? 0.1,
     antialias: options.antialias ?? false,
     autoDensity: false,
     resolution: 1,
     powerPreference: "low-power",
     hello: false,
-  });
+  };
+
+  let app: any;
+  let webglError: unknown = null;
+
+  try {
+    app = createPixiApplication(options, applicationCtor, baseOverrides);
+  } catch (err) {
+    webglError = err;
+    console.warn("[Stage2048] WebGL renderer failed, trying canvas fallback", err);
+    try {
+      app = createPixiApplication(options, applicationCtor, {
+        ...baseOverrides,
+        preference: "canvas",
+        antialias: false,
+      });
+    } catch (canvasError) {
+      console.error("[Stage2048] Canvas renderer fallback also failed", canvasError);
+      throw (webglError ?? canvasError);
+    }
+  }
 
   // Create container and overlay structure
   const container = document.createElement("div");
