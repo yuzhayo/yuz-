@@ -15,15 +15,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Yuzha"
+args = "Launcher"
 
 [[workflows.workflow]]
-name = "Yuzha"
+name = "Launcher"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run dev:yuzha"
+args = "npm run dev:launcher"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
@@ -36,10 +36,6 @@ externalPort = 5000
 [[ports]]
 localPort = 5000
 externalPort = 80
-
-[[ports]]
-localPort = 35075
-externalPort = 3002
 
 [[ports]]
 localPort = 35765
