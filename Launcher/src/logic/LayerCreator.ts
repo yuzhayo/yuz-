@@ -328,9 +328,9 @@ export const STAGE_CSS = `
 `.trim();
 
 // ===================================================================
-// 🟢 BLOCK 3: CORE TRANSFORM & MATH FUNCTIONS
+// 🟢 BLOCK 3: UTILITY FUNCTIONS & EXPORTS (MERGED: Block 3 + Block 16)
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
-// Math helpers for angle/value conversions and stage transformations
+// Math helpers, stage transformations, and convenience exports
 // ===================================================================
 
 export function calculateStageTransform(
@@ -399,6 +399,17 @@ export function ensureStageStyles(): void {
   styleElement.textContent = STAGE_CSS;
   document.head.appendChild(styleElement);
 }
+
+// === CONSOLIDATED EXPORTS (formerly Block 16) ===
+// Export utilities for external access
+export {
+  logicZIndexFor,
+  logicApplyBasicTransform,
+};
+export { toRad, toDeg, clamp, clamp01, clampRpm60, normDeg } from "./math";
+
+// Export default for LogicStage
+export default LogicStage;
 
 // ===================================================================
 // 🔴 BLOCK 4: CORE LAYER TRANSFORM FUNCTIONS
@@ -1574,20 +1585,4 @@ export function createPixiEngine(): PixiEngine {
   return engine;
 }
 
-// ===================================================================
-// 🟢 BLOCK 16: CONVENIENCE EXPORTS
-// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete (convenience only)
-// Export functions and default component for external use
-// ===================================================================
-
-
-// Export utilities for external access
-export {
-  logicZIndexFor,
-  logicApplyBasicTransform,
-};
-export { toRad, toDeg, clamp, clamp01, clampRpm60, normDeg } from "./math";
-
-// Export default for LogicStage
-export default LogicStage;
 
