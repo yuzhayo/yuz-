@@ -33,6 +33,7 @@ import type { LayerClockManager } from "./LayerClock";
 import { createLayerOrbitManager } from "./LayerOrbit";
 import type { LayerOrbitManager } from "./LayerOrbit";
 import { createLayerEffectManager } from "./LayerEffect";
+import { toRad } from "./math";
 import type { LayerEffectManager, EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec } from "./LayerEffect";
 
 // Re-export imported types for backward compatibility
@@ -332,37 +333,6 @@ export const STAGE_CSS = `
 // Math helpers for angle/value conversions and stage transformations
 // ===================================================================
 
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function toDeg(rad: number): number {
-  return (rad * 180) / Math.PI;
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-function clamp01(n: number): number {
-  return clamp(n, 0, 1);
-}
-
-function normDeg(deg: number): number {
-  const d = deg % 360;
-  return d < 0 ? d + 360 : d;
-}
-
-function clampRpm60(v: unknown): number {
-  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
-  if (!isFinite(n) || n <= 0) return 0;
-  return Math.min(60, Math.max(0, n));
-}
-
-/**
- * Calculate stage transform for cover behavior
- * Fills viewport while maintaining aspect ratio
- */
 export function calculateStageTransform(
   viewportWidth: number,
   viewportHeight: number,
@@ -1153,45 +1123,40 @@ export async function createStage2048(
 
   // Create Pixi application with forced renderer type to avoid auto-detection
   let app: any;
-  
+  const baseBackgroundAlpha = options.backgroundAlpha ?? 0.1;
+  const baseOverrides: Record<string, unknown> = {
+    backgroundAlpha: baseBackgroundAlpha,
+    antialias: options.antialias ?? false,
+    autoDensity: false,
+    resolution: 1,
+    powerPreference: "low-power",
+    hello: false,
+  };
+
   // Try WebGL first, then fallback to Canvas if needed
   try {
-    app = new PixiApplication({
-      width: STAGE_WIDTH,
-      height: STAGE_HEIGHT,
-      backgroundAlpha: options.backgroundAlpha ?? 0.1, // Make slightly visible for debugging
-      antialias: options.antialias ?? false,
-      autoDensity: false,
-      resolution: 1, // Keep simple for compatibility
-      powerPreference: 'low-power', // Use less demanding GPU settings
-      hello: false, // Disable Pixi banner
-    });
+    app = createPixiApplication(options, PixiApplication, baseOverrides);
   } catch (webglError) {
     try {
       // Fallback to Canvas renderer explicitly
       console.log("WebGL failed, trying Canvas renderer:", webglError);
       const { Renderer } = await import("pixi.js");
-      app = new PixiApplication({
-        width: STAGE_WIDTH,
-        height: STAGE_HEIGHT,
-        backgroundAlpha: 0.1,
-        hello: false,
+      app = createPixiApplication(options, PixiApplication, {
+        ...baseOverrides,
         renderer: new Renderer({
           width: STAGE_WIDTH,
           height: STAGE_HEIGHT,
           view: document.createElement('canvas'),
           background: '#000000',
-          backgroundAlpha: 0.1,
-        })
+          backgroundAlpha: baseBackgroundAlpha,
+        }),
       });
     } catch (canvasError) {
       // Final minimal fallback
       console.log("Canvas renderer also failed, trying minimal configuration:", canvasError);
-      app = new PixiApplication({
-        width: STAGE_WIDTH,
-        height: STAGE_HEIGHT,
-        backgroundAlpha: 0.1,
-        hello: false,
+      app = createPixiApplication(options, PixiApplication, {
+        backgroundAlpha: baseBackgroundAlpha,
+        antialias: options.antialias ?? false,
       });
     }
   }
@@ -1269,7 +1234,11 @@ export function createTransformManager(debug = false): StageTransformManager {
 /**
  * Create just the Pixi application with correct dimensions
  */
-export function createPixiApplication(options: Stage2048Options = {}, PixiApplication?: any) {
+export function createPixiApplication(
+  options: Stage2048Options = {},
+  PixiApplication?: any,
+  appOverrides: Record<string, unknown> = {},
+) {
   if (!PixiApplication) {
     throw new Error("PixiApplication constructor required");
   }
@@ -1284,6 +1253,7 @@ export function createPixiApplication(options: Stage2048Options = {}, PixiApplic
     autoDensity: true,
     resolution: dpr,
     preference: "webgl",
+    ...appOverrides,
   });
 }
 
@@ -1293,26 +1263,42 @@ export function createPixiApplication(options: Stage2048Options = {}, PixiApplic
  * Create a coordinate transformer hook for React components
  */
 export function createCoordinateTransformer(manager: StageTransformManager) {
+  const transformNativeEvent = (event: PointerEvent | MouseEvent | TouchEvent) => {
+    return manager.transformEventCoordinates(event);
+  };
+
   return {
     /**
      * Transform pointer event coordinates to stage coordinates
      */
     transformPointerEvent: (event: ReactPointerEvent<HTMLElement>): StageCoordinates | null => {
-      return manager.transformEventCoordinates(event.nativeEvent);
+      return transformNativeEvent(event.nativeEvent);
     },
 
     /**
      * Transform mouse event coordinates to stage coordinates
      */
     transformMouseEvent: (event: ReactMouseEvent<HTMLElement>): StageCoordinates | null => {
-      return manager.transformEventCoordinates(event.nativeEvent);
+      return transformNativeEvent(event.nativeEvent);
     },
 
     /**
      * Transform touch event coordinates to stage coordinates
      */
     transformTouchEvent: (event: ReactTouchEvent<HTMLElement>): StageCoordinates | null => {
-      return manager.transformEventCoordinates(event.nativeEvent);
+      return transformNativeEvent(event.nativeEvent);
+    },
+
+    /**
+     * Get current stage transform data
+     */
+    getTransform: (): StageTransform | null => manager.getTransform(),
+
+    /**
+     * Check if stage coordinates are within bounds
+     */
+    isWithinStage: (stageX: number, stageY: number): boolean => {
+      return isWithinStage(stageX, stageY);
     },
   };
 }
@@ -1321,26 +1307,7 @@ export function createCoordinateTransformer(manager: StageTransformManager) {
  * Hook for using coordinate transformation in gesture components
  */
 export function useStageCoordinates(transformManager: StageTransformManager) {
-  return {
-    /**
-     * Transform React pointer event to stage coordinates
-     */
-    transformPointerEvent: (event: ReactPointerEvent<HTMLElement>) => {
-      return transformManager.transformEventCoordinates(event.nativeEvent);
-    },
-
-    /**
-     * Get current stage transform data
-     */
-    getTransform: () => transformManager.getTransform(),
-
-    /**
-     * Check if stage coordinates are within bounds
-     */
-    isWithinStage: (stageX: number, stageY: number) => {
-      return stageX >= 0 && stageX <= STAGE_WIDTH && stageY >= 0 && stageY <= STAGE_HEIGHT;
-    },
-  };
+  return createCoordinateTransformer(transformManager);
 }
 
 // ===================================================================
@@ -1550,25 +1517,15 @@ export function createPixiEngine(): PixiEngine {
 // Export functions and default component for external use
 // ===================================================================
 
-export function createCreatorManager(): LayerCreatorManager {
-  return createLayerCreatorManager();
-}
-
-export function createEngine(): PixiEngine {
-  return createPixiEngine();
-}
+export { createLayerCreatorManager as createCreatorManager, createPixiEngine as createEngine };
 
 // Export utilities for external access
 export {
-  toRad,
-  toDeg,
-  clamp,
-  clamp01,
-  clampRpm60,
-  normDeg,
   logicZIndexFor,
   logicApplyBasicTransform,
 };
+export { toRad, toDeg, clamp, clamp01, clampRpm60, normDeg } from "./math";
 
 // Export default for LogicStage
 export default LogicStage;
+

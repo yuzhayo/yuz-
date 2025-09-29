@@ -16,24 +16,13 @@
 // Import all contracts from centralized location
 import { STAGE_WIDTH, STAGE_HEIGHT } from "./LayerCreator";
 import type { GenericSprite, GenericApplication, BuiltLayer, LayerConfig } from "./LayerCreator";
+import { clamp, toRad } from "./math";
 
 // ===================================================================
 // 🟢 BLOCK 1: UTILITY HELPER FUNCTIONS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
 // These are helper functions for angle/value conversions and geometry
 // ===================================================================
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-function _clamp01(n: number): number {
-  return clamp(n, 0, 1);
-}
 
 function getSpriteDimensions(sp: GenericSprite): { width: number; height: number } | null {
   // Get dimensions from Pixi texture
@@ -547,9 +536,7 @@ function debugClock(layerId: string, ...data: unknown[]) {
 }
 
 // Export convenience functions for backward compatibility
-export function createClockManager(): LayerClockManager {
-  return createLayerClockManager();
-}
+export { createLayerClockManager as createClockManager };
 
 // Legacy compatibility function for existing buildClock usage
 export function buildClock(app: GenericApplication, built: BuiltLayer[]) {

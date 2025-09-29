@@ -15,20 +15,14 @@
 
 // Import core contracts from centralized location
 import type { GenericSprite, GenericApplication, BuiltLayer } from "./LayerCreator";
+import { clamp01, toRad } from "./math";
 
 // ===================================================================
 // 🟢 BLOCK 1: UTILITY MATH FUNCTIONS AND CAPABILITY DETECTION
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
 // Math helpers for angles, easing, and hardware capability detection
 // ===================================================================
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function clamp01(n: number): number {
-  return Math.max(0, Math.min(1, n));
-}
+// Angle helpers supplied by math.ts
 
 function pingPong(t: number): number {
   if (t > 0.5) return 1 - (t - 0.5) * 2;
@@ -659,6 +653,4 @@ export function createLayerEffectManager(effectHandler?: EffectHandler): LayerEf
 // ===================================================================
 
 // Export convenience functions for backward compatibility
-export function createEffectManager(): LayerEffectManager {
-  return createLayerEffectManager();
-}
+export { createLayerEffectManager as createEffectManager };

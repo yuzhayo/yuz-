@@ -15,26 +15,14 @@
 
 // Import only core contracts from centralized location
 import type { GenericSprite, GenericApplication, BuiltLayer } from "./LayerCreator";
+import { clampRpm60, toDeg, toRad } from "./math";
 
 // ===================================================================
 // 🟢 BLOCK 1: UTILITY MATH FUNCTIONS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
 // These are helper functions for RPM clamping and angle conversions
 // ===================================================================
-
-function clampRpm60(v: unknown): number {
-  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
-  if (!isFinite(n) || n <= 0) return 0;
-  return Math.min(60, Math.max(0, n));
-}
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function toDeg(rad: number): number {
-  return (rad * 180) / Math.PI;
-}
+// Implemented via shared helpers in math.ts
 
 // ===================================================================
 // 🔴 BLOCK 2: CORE SPIN TYPES
@@ -188,9 +176,7 @@ export function getSpinDiagnostics(manager: LayerSpinManager): {
 // ===================================================================
 
 // Export convenience functions
-export function createSpinManager(): LayerSpinManager {
-  return createLayerSpinManager();
-}
+export { createLayerSpinManager as createSpinManager };
 
 // Export utility functions for external access
 export { clampRpm60, toRad, toDeg };

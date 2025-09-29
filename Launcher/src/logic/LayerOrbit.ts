@@ -16,35 +16,14 @@
 // Import all contracts from centralized location
 import { STAGE_WIDTH, STAGE_HEIGHT } from "./LayerCreator";
 import type { GenericApplication, GenericSprite, BuiltLayer, LayerConfig } from "./LayerCreator";
+import { clamp, clamp01, clampRpm60, normDeg, toRad } from "./math";
 
 // ===================================================================
 // 🟢 BLOCK 1: UTILITY MATH AND GEOMETRY FUNCTIONS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
 // These are helper functions for math operations and geometry calculations
 // ===================================================================
-
-function clamp(n: number, min: number, max: number): number {
-  return Math.max(min, Math.min(max, n));
-}
-
-function clamp01(n: number): number {
-  return clamp(n, 0, 1);
-}
-
-function toRad(deg: number): number {
-  return (deg * Math.PI) / 180;
-}
-
-function normDeg(deg: number): number {
-  const d = deg % 360;
-  return d < 0 ? d + 360 : d;
-}
-
-function clampRpm60(v: unknown): number {
-  const n = typeof v === "number" ? v : v == null ? 0 : Number(v);
-  if (!isFinite(n) || n <= 0) return 0;
-  return Math.min(60, Math.max(0, n));
-}
+// Implemented via shared helpers in math.ts
 
 /**
  * Projects a point to the border of a rectangle, finding the intersection
@@ -387,9 +366,7 @@ export function createLayerOrbitManager(): LayerOrbitManager {
 // ===================================================================
 
 // Export convenience functions
-export function createOrbitManager(): LayerOrbitManager {
-  return createLayerOrbitManager();
-}
+export { createLayerOrbitManager as createOrbitManager };
 
 // Export utility functions that other modules need
 export { projectToRectBorder };
