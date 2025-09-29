@@ -29,15 +29,6 @@ export default function MainScreen(_props: MainScreenProps) {
       {/* Invisible gesture target */}
       <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto z-10" />
       
-      {/* Navigation hint */}
-      {!gesture.open && (
-        <div className="absolute top-4 left-4 z-10">
-          <div className="bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2 text-sm text-white/70 border border-white/10">
-            Tap and hold to access modules
-          </div>
-        </div>
-      )}
-
       {/* Navigation dock */}
       <MainScreenBtnPanel
         open={gesture.open}

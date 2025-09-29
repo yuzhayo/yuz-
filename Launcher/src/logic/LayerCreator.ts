@@ -1103,63 +1103,18 @@ export async function createStage2048(
     ensureStageStyles();
   }
 
-  // Ensure we have a Pixi Application constructor
-  if (!PixiApplication) {
-    try {
-      // Try to import Pixi.js dynamically
-      const pixi = await import("pixi.js");
-      PixiApplication = pixi.Application;
-    } catch {
-      throw new Error(
-        "Pixi.js Application not available. Please provide PixiApplication parameter or install pixi.js",
-      );
-    }
-  }
-
   // Create transform manager
   const transformManager = new StageTransformManager(options.debug);
 
-  
-
-  // Create Pixi application with forced renderer type to avoid auto-detection
-  let app: any;
-  const baseBackgroundAlpha = options.backgroundAlpha ?? 0.1;
-  const baseOverrides: Record<string, unknown> = {
-    backgroundAlpha: baseBackgroundAlpha,
+  const applicationCtor = PixiApplication ?? Application;
+  const app = createPixiApplication(options, applicationCtor, {
+    backgroundAlpha: options.backgroundAlpha ?? 0.1,
     antialias: options.antialias ?? false,
     autoDensity: false,
     resolution: 1,
     powerPreference: "low-power",
     hello: false,
-  };
-
-  // Try WebGL first, then fallback to Canvas if needed
-  try {
-    app = createPixiApplication(options, PixiApplication, baseOverrides);
-  } catch (webglError) {
-    try {
-      // Fallback to Canvas renderer explicitly
-      console.log("WebGL failed, trying Canvas renderer:", webglError);
-      const { Renderer } = await import("pixi.js");
-      app = createPixiApplication(options, PixiApplication, {
-        ...baseOverrides,
-        renderer: new Renderer({
-          width: STAGE_WIDTH,
-          height: STAGE_HEIGHT,
-          view: document.createElement('canvas'),
-          background: '#000000',
-          backgroundAlpha: baseBackgroundAlpha,
-        }),
-      });
-    } catch (canvasError) {
-      // Final minimal fallback
-      console.log("Canvas renderer also failed, trying minimal configuration:", canvasError);
-      app = createPixiApplication(options, PixiApplication, {
-        backgroundAlpha: baseBackgroundAlpha,
-        antialias: options.antialias ?? false,
-      });
-    }
-  }
+  });
 
   // Create container and overlay structure
   const container = document.createElement("div");
@@ -1236,13 +1191,9 @@ export function createTransformManager(debug = false): StageTransformManager {
  */
 export function createPixiApplication(
   options: Stage2048Options = {},
-  PixiApplication?: any,
+  PixiApplication: any = Application,
   appOverrides: Record<string, unknown> = {},
 ) {
-  if (!PixiApplication) {
-    throw new Error("PixiApplication constructor required");
-  }
-
   const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
 
   return new PixiApplication({
