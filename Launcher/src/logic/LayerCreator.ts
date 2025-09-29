@@ -412,11 +412,12 @@ export { toRad, toDeg, clamp, clamp01, clampRpm60, normDeg } from "./math";
 export default LogicStage;
 
 // ===================================================================
-// 🔴 BLOCK 4: CORE LAYER TRANSFORM FUNCTIONS
-// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
-// These functions handle basic layer positioning and z-ordering
+// 🔴 BLOCK 4: TRANSFORM & CONFIGURATION (MERGED: Block 4 + Block 5 + Block 6)
+// ⚠️  AI AGENT: CRITICAL BLOCK - Core functions are critical, transform management is optional
+// Handles layer positioning, config processing, and DOM coordinate transformations
 // ===================================================================
 
+// === CORE LAYER TRANSFORM FUNCTIONS (formerly Block 4) ===
 function logicZIndexFor(cfg: LayerConfig): number {
   const m = cfg.id.match(/\d+/);
   return m ? parseInt(m[0], 10) : 0;
@@ -442,23 +443,14 @@ function logicApplyBasicTransform(app: GenericApplication, sp: GenericSprite, cf
   }
 }
 
-// ===================================================================
-// 🔴 BLOCK 5: CONFIG PROCESSING
-// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
-// Handles JSON config reading and image URL resolution
-// ===================================================================
-
+// === CONFIG PROCESSING (formerly Block 5) ===
 function getUrlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): string | null {
   if (ref.kind === "url") return ref.url;
   const url = cfg.imageRegistry[ref.id];
   return url ?? null;
 }
 
-// ===================================================================
-// 🟡 BLOCK 6: STAGE2048 TRANSFORM MANAGEMENT
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage transform)
-// Handles DOM manipulation and coordinate transformation for stage scaling
-// ===================================================================
+// === STAGE2048 TRANSFORM MANAGEMENT (formerly Block 6) ===
 
 /**
  * Stage transform manager class
