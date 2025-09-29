@@ -328,9 +328,9 @@ export const STAGE_CSS = `
 `.trim();
 
 // ===================================================================
-// 🟢 BLOCK 3: CORE TRANSFORM & MATH FUNCTIONS
+// 🟢 BLOCK 3: UTILITY FUNCTIONS & EXPORTS (MERGED: Block 3 + Block 16)
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
-// Math helpers for angle/value conversions and stage transformations
+// Math helpers, stage transformations, and convenience exports
 // ===================================================================
 
 export function calculateStageTransform(
@@ -400,12 +400,24 @@ export function ensureStageStyles(): void {
   document.head.appendChild(styleElement);
 }
 
+// === CONSOLIDATED EXPORTS (formerly Block 16) ===
+// Export utilities for external access
+export {
+  logicZIndexFor,
+  logicApplyBasicTransform,
+};
+export { toRad, toDeg, clamp, clamp01, clampRpm60, normDeg } from "./math";
+
+// Export default for LogicStage
+export default LogicStage;
+
 // ===================================================================
-// 🔴 BLOCK 4: CORE LAYER TRANSFORM FUNCTIONS
-// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
-// These functions handle basic layer positioning and z-ordering
+// 🔴 BLOCK 4: TRANSFORM & CONFIGURATION (MERGED: Block 4 + Block 5 + Block 6)
+// ⚠️  AI AGENT: CRITICAL BLOCK - Core functions are critical, transform management is optional
+// Handles layer positioning, config processing, and DOM coordinate transformations
 // ===================================================================
 
+// === CORE LAYER TRANSFORM FUNCTIONS (formerly Block 4) ===
 function logicZIndexFor(cfg: LayerConfig): number {
   const m = cfg.id.match(/\d+/);
   return m ? parseInt(m[0], 10) : 0;
@@ -431,23 +443,14 @@ function logicApplyBasicTransform(app: GenericApplication, sp: GenericSprite, cf
   }
 }
 
-// ===================================================================
-// 🔴 BLOCK 5: CONFIG PROCESSING
-// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
-// Handles JSON config reading and image URL resolution
-// ===================================================================
-
+// === CONFIG PROCESSING (formerly Block 5) ===
 function getUrlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): string | null {
   if (ref.kind === "url") return ref.url;
   const url = cfg.imageRegistry[ref.id];
   return url ?? null;
 }
 
-// ===================================================================
-// 🟡 BLOCK 6: STAGE2048 TRANSFORM MANAGEMENT
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage transform)
-// Handles DOM manipulation and coordinate transformation for stage scaling
-// ===================================================================
+// === STAGE2048 TRANSFORM MANAGEMENT (formerly Block 6) ===
 
 /**
  * Stage transform manager class
@@ -620,9 +623,33 @@ export function isPixiApplication(app: any): boolean {
   );
 }
 
-// === PIXI-SPECIFIC EFFECT HANDLER ===
-export function createPixiEffectHandler(): EffectHandler {
-  return {
+// === CONSOLIDATED PIXI FACTORIES (merged separate factory functions) ===
+export function createPixiFactories(): { spriteFactory: SpriteFactory; effectHandler: EffectHandler } {
+  // Sprite Factory implementation (formerly createPixiSpriteFactory)
+  const spriteFactory: SpriteFactory = {
+    async createSprite(url: string): Promise<GenericSprite> {
+      const texture = await Assets.load(url);
+      const sprite = new Sprite(texture);
+      return sprite as GenericSprite;
+    },
+
+    createContainer(): GenericContainer {
+      return new Container() as GenericContainer;
+    },
+
+    async loadAssets(urls: string[]): Promise<void> {
+      await Promise.all(
+        urls.map((url) =>
+          Assets.load(url).catch((e) => {
+            console.warn("[EnginePixi] Preload failed for", url, e);
+          }),
+        ),
+      );
+    },
+  };
+
+  // Effect Handler implementation (formerly createPixiEffectHandler)
+  const effectHandler: EffectHandler = {
     createAuraSprite(
       originalSprite: GenericSprite,
       spec: GlowSpec | BloomSpec,
@@ -663,81 +690,15 @@ export function createPixiEffectHandler(): EffectHandler {
       }
     },
   };
-}
 
-// === PIXI-SPECIFIC SPRITE FACTORY ===
-export function createPixiSpriteFactory(): SpriteFactory {
-  return {
-    async createSprite(url: string): Promise<GenericSprite> {
-      const texture = await Assets.load(url);
-      const sprite = new Sprite(texture);
-      return sprite as GenericSprite;
-    },
-
-    createContainer(): GenericContainer {
-      return new Container() as GenericContainer;
-    },
-
-    async loadAssets(urls: string[]): Promise<void> {
-      await Promise.all(
-        urls.map((url) =>
-          Assets.load(url).catch((e) => {
-            console.warn("[EnginePixi] Preload failed for", url, e);
-          }),
-        ),
-      );
-    },
-  };
-}
-
-// === CONSOLIDATED FACTORY CREATION ===
-export function createPixiFactories(): { spriteFactory: SpriteFactory; effectHandler: EffectHandler } {
-  return {
-    spriteFactory: createPixiSpriteFactory(),
-    effectHandler: createPixiEffectHandler(),
-  };
+  return { spriteFactory, effectHandler };
 }
 
 // ===================================================================
-// 🟡 BLOCK 8: ANIMATION MANAGERS STATE
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
-// Manages spin, orbit, clock, and effect animations
+// 🔴 BLOCK 8: CORE MANAGER & ANIMATION STATE (MERGED: Block 8 + Block 10)
+// ⚠️  AI AGENT: CRITICAL BLOCK - Core implementation with optional animations
+// Main implementation that creates and manages layers with animation support
 // ===================================================================
-
-// === UNIFIED MANAGER CREATION ===
-export function createAnimationManagers(
-  app: GenericApplication,
-  layers: BuiltLayer[],
-  effectHandler?: EffectHandler,
-): LayerCreatorManagersState {
-  // Initialize all managers
-  const spinManager = createLayerSpinManager();
-  spinManager.init(app, layers);
-
-  const clockManager = createLayerClockManager();
-  clockManager.init(app, layers);
-
-  // Build RPM map for orbit system compatibility
-  const spinRpmBySprite = new Map<GenericSprite, number>();
-  for (const layer of layers) {
-    spinRpmBySprite.set(layer.sprite, spinManager.getSpinRpm(layer.sprite));
-  }
-
-  const orbitManager = createLayerOrbitManager();
-  orbitManager.init(app, layers, spinRpmBySprite);
-
-  // Effects (unified system)
-  const effectManager = createLayerEffectManager(effectHandler);
-  effectManager.init(app, layers);
-
-  return {
-    spinManager,
-    clockManager,
-    orbitManager,
-    effectManager,
-    elapsed: 0,
-  };
-}
 
 export type LayerCreatorItem = {
   id: string;
@@ -774,12 +735,6 @@ export interface LayerCreatorManager {
   getLayers(): BuiltLayer[];
   hasAnimations(): boolean;
 }
-
-// ===================================================================
-// 🔴 BLOCK 10: CORE LAYER CREATOR IMPLEMENTATION
-// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
-// Main implementation that creates and manages layers
-// ===================================================================
 
 export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerCreatorManager {
   let _app: GenericApplication | null = null;
@@ -909,13 +864,33 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 
       _layers = built;
 
-      // ===================================================================
-      // 🟡 BLOCK 11: ANIMATION MANAGERS INITIALIZATION
-      // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
-      // ===================================================================
+      // Initialize animation managers (inlined from former createAnimationManagers)
+      const spinManager = createLayerSpinManager();
+      spinManager.init(app, built);
 
-      // Initialize all managers using unified function
-      _managersState = createAnimationManagers(app, built, effectHandler);
+      const clockManager = createLayerClockManager();
+      clockManager.init(app, built);
+
+      // Build RPM map for orbit system compatibility
+      const spinRpmBySprite = new Map<GenericSprite, number>();
+      for (const layer of built) {
+        spinRpmBySprite.set(layer.sprite, spinManager.getSpinRpm(layer.sprite));
+      }
+
+      const orbitManager = createLayerOrbitManager();
+      orbitManager.init(app, built, spinRpmBySprite);
+
+      // Effects (unified system)
+      const effectManager = createLayerEffectManager(effectHandler);
+      effectManager.init(app, built);
+
+      _managersState = {
+        spinManager,
+        clockManager,
+        orbitManager,
+        effectManager,
+        elapsed: 0,
+      };
 
       // ===================================================================
       // 🟡 BLOCK 12: LIFECYCLE HOOKS (RESIZE/TICKER)
@@ -1090,9 +1065,9 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 }
 
 // ===================================================================
-// 🟡 BLOCK 13: STAGE2048 FACTORY FUNCTIONS
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage creation)
-// Factory functions for creating complete Stage2048 systems
+// 🟡 BLOCK 13: APPLICATION & ENGINE SYSTEMS (MERGED: Block 13 + Block 15)
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage/engine creation)
+// Complete application creation, stage systems, and engine implementations
 // ===================================================================
 
 /**
@@ -1448,12 +1423,6 @@ export function LogicStage(props: LogicStageProps = {}) {
   });
 }
 
-// ===================================================================
-// 🟡 BLOCK 15: PIXI ENGINE IMPLEMENTATION
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes engine wrapper)
-// Advanced Pixi engine implementation for direct control
-// ===================================================================
-
 // === SIMPLIFIED BUILD SCENE FUNCTION ===
 // This is the main function used by the Stage2048 component
 export async function buildSceneFromLogic(
@@ -1496,23 +1465,31 @@ export function createPixiEngine(): PixiEngine {
     ): Promise<EngineHandle> {
       _root = root;
 
-      // Create Pixi Application with options
-      const dpr = Math.min(opts?.dprCap ?? 2, window.devicePixelRatio || 1);
-      _app = new Application({
-        resizeTo: opts?.resizeTo ?? window,
+      // Create Pixi Application using unified creation function
+      const stage2048Options: Stage2048Options = {
         backgroundAlpha: opts?.backgroundAlpha ?? 0,
         antialias: opts?.antialias ?? true,
-        autoDensity: true,
-        resolution: dpr,
-      });
+        dprCap: opts?.dprCap ?? 2,
+      };
+      
+      try {
+        _app = createPixiApplication(stage2048Options, Application);
+        
+        if (!_app) {
+          throw new Error("Failed to create Pixi application");
+        }
 
-      // Mount canvas to DOM
-      root.appendChild(_app.view as HTMLCanvasElement);
+        // Mount canvas to DOM
+        root.appendChild(_app.view as HTMLCanvasElement);
 
-      // Use LayerCreator to build the scene
-      const factories = createPixiFactories();
-      _layerManager = createLayerCreatorManager(factories.spriteFactory);
-      _result = await _layerManager.init(_app, cfg, factories.effectHandler);
+        // Use LayerCreator to build the scene
+        const factories = createPixiFactories();
+        _layerManager = createLayerCreatorManager(factories.spriteFactory);
+        _result = await _layerManager.init(_app, cfg, factories.effectHandler);
+      } catch (error) {
+        console.error("[createPixiEngine] Failed to initialize:", error);
+        throw error;
+      }
 
       // Add the container to the stage
       _app.stage.addChild(_result.container as Container);
@@ -1574,20 +1551,4 @@ export function createPixiEngine(): PixiEngine {
   return engine;
 }
 
-// ===================================================================
-// 🟢 BLOCK 16: CONVENIENCE EXPORTS
-// ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete (convenience only)
-// Export functions and default component for external use
-// ===================================================================
-
-
-// Export utilities for external access
-export {
-  logicZIndexFor,
-  logicApplyBasicTransform,
-};
-export { toRad, toDeg, clamp, clamp01, clampRpm60, normDeg } from "./math";
-
-// Export default for LogicStage
-export default LogicStage;
 
