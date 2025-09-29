@@ -631,9 +631,33 @@ export function isPixiApplication(app: any): boolean {
   );
 }
 
-// === PIXI-SPECIFIC EFFECT HANDLER ===
-export function createPixiEffectHandler(): EffectHandler {
-  return {
+// === CONSOLIDATED PIXI FACTORIES (merged separate factory functions) ===
+export function createPixiFactories(): { spriteFactory: SpriteFactory; effectHandler: EffectHandler } {
+  // Sprite Factory implementation (formerly createPixiSpriteFactory)
+  const spriteFactory: SpriteFactory = {
+    async createSprite(url: string): Promise<GenericSprite> {
+      const texture = await Assets.load(url);
+      const sprite = new Sprite(texture);
+      return sprite as GenericSprite;
+    },
+
+    createContainer(): GenericContainer {
+      return new Container() as GenericContainer;
+    },
+
+    async loadAssets(urls: string[]): Promise<void> {
+      await Promise.all(
+        urls.map((url) =>
+          Assets.load(url).catch((e) => {
+            console.warn("[EnginePixi] Preload failed for", url, e);
+          }),
+        ),
+      );
+    },
+  };
+
+  // Effect Handler implementation (formerly createPixiEffectHandler)
+  const effectHandler: EffectHandler = {
     createAuraSprite(
       originalSprite: GenericSprite,
       spec: GlowSpec | BloomSpec,
@@ -674,39 +698,8 @@ export function createPixiEffectHandler(): EffectHandler {
       }
     },
   };
-}
 
-// === PIXI-SPECIFIC SPRITE FACTORY ===
-export function createPixiSpriteFactory(): SpriteFactory {
-  return {
-    async createSprite(url: string): Promise<GenericSprite> {
-      const texture = await Assets.load(url);
-      const sprite = new Sprite(texture);
-      return sprite as GenericSprite;
-    },
-
-    createContainer(): GenericContainer {
-      return new Container() as GenericContainer;
-    },
-
-    async loadAssets(urls: string[]): Promise<void> {
-      await Promise.all(
-        urls.map((url) =>
-          Assets.load(url).catch((e) => {
-            console.warn("[EnginePixi] Preload failed for", url, e);
-          }),
-        ),
-      );
-    },
-  };
-}
-
-// === CONSOLIDATED FACTORY CREATION ===
-export function createPixiFactories(): { spriteFactory: SpriteFactory; effectHandler: EffectHandler } {
-  return {
-    spriteFactory: createPixiSpriteFactory(),
-    effectHandler: createPixiEffectHandler(),
-  };
+  return { spriteFactory, effectHandler };
 }
 
 // ===================================================================
