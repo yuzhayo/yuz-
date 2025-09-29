@@ -1065,9 +1065,9 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 }
 
 // ===================================================================
-// 🟡 BLOCK 13: STAGE2048 FACTORY FUNCTIONS
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage creation)
-// Factory functions for creating complete Stage2048 systems
+// 🟡 BLOCK 13: APPLICATION & ENGINE SYSTEMS (MERGED: Block 13 + Block 15)
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage/engine creation)
+// Complete application creation, stage systems, and engine implementations
 // ===================================================================
 
 /**
@@ -1423,12 +1423,6 @@ export function LogicStage(props: LogicStageProps = {}) {
   });
 }
 
-// ===================================================================
-// 🟡 BLOCK 15: PIXI ENGINE IMPLEMENTATION
-// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes engine wrapper)
-// Advanced Pixi engine implementation for direct control
-// ===================================================================
-
 // === SIMPLIFIED BUILD SCENE FUNCTION ===
 // This is the main function used by the Stage2048 component
 export async function buildSceneFromLogic(
@@ -1471,15 +1465,13 @@ export function createPixiEngine(): PixiEngine {
     ): Promise<EngineHandle> {
       _root = root;
 
-      // Create Pixi Application with options
-      const dpr = Math.min(opts?.dprCap ?? 2, window.devicePixelRatio || 1);
-      _app = new Application({
-        resizeTo: opts?.resizeTo ?? window,
+      // Create Pixi Application using unified creation function
+      const stage2048Options: Stage2048Options = {
         backgroundAlpha: opts?.backgroundAlpha ?? 0,
         antialias: opts?.antialias ?? true,
-        autoDensity: true,
-        resolution: dpr,
-      });
+        dprCap: opts?.dprCap ?? 2,
+      };
+      _app = createPixiApplication(stage2048Options, Application);
 
       // Mount canvas to DOM
       root.appendChild(_app.view as HTMLCanvasElement);
