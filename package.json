@@ -10,7 +10,8 @@
   "workspaces": [
     "apps/*",
     "Launcher",
-    "LauncherBackup"
+    "LauncherBackup",
+    "yuzha"
   ],
   "scripts": {
     "dev": "echo Pilih app: npm run dev:launcher atau dev:modul",
@@ -25,6 +26,9 @@
     "dev:3database": "npm run dev -w apps/3Database",
     "dev:4extra": "npm run dev -w apps/4Extra",
     "dev:5rara": "npm run dev -w apps/5Rara",
+    "dev:yuzha": "npm run dev -w yuzha",
+    "dev:yuzha:3000": "npm run dev:3000 -w yuzha",
+    "dev:yuzha:5000": "npm run dev:5000 -w yuzha",
     "dev:all": "concurrently \"npm run dev:launcher\" \"npm run dev:0setting\" \"npm run dev:1meng\" \"npm run dev:3database\" \"npm run dev:4extra\" \"npm run dev:5rara\"",
     "preview": "npm run preview -w Launcher",
     "preview:3000": "npm run preview:3000 -w Launcher",
