@@ -6,7 +6,7 @@ import {
   MainScreenUpdater,
   MainScreenApiTester,
 } from "./MainScreenUtils";
-import Stage3D from "./Stage3D";
+import Stage2048System from "./Stage2048System";
 
 export type MainScreenProps = {
   // Simplified without renderer dependencies
@@ -22,13 +22,11 @@ export default function MainScreen(_props: MainScreenProps) {
   
   return (
     <div className="relative w-screen h-screen overflow-hidden bg-black">
-      {/* 3D Stage Background - Fill entire viewport */}
-      <div className="absolute inset-0">
-        <Stage3D width={2048} height={2048} />
-      </div>
+      {/* Stage2048 System - Exact launcher implementation */}
+      <Stage2048System />
       
       {/* Invisible gesture target */}
-      <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto" />
+      <div {...gesture.bindTargetProps()} className="absolute inset-0 pointer-events-auto z-10" />
       
       {/* Navigation hint */}
       {!gesture.open && (
