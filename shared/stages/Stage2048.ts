@@ -520,7 +520,7 @@ export async function createStage2048(
   // Create Pixi application with forced renderer type to avoid auto-detection
   let app: any;
   
-  // Try Canvas renderer to avoid WebGL auto-detection issues
+  // Try WebGL first, then fallback to Canvas if needed
   try {
     app = new PixiApplication({
       width: STAGE_WIDTH,
@@ -529,18 +529,37 @@ export async function createStage2048(
       antialias: options.antialias ?? false,
       autoDensity: false,
       resolution: 1, // Keep simple for compatibility
-      forceCanvas: true, // Force Canvas renderer, avoid WebGL auto-detection
+      powerPreference: 'low-power', // Use less demanding GPU settings
       hello: false, // Disable Pixi banner
     });
-  } catch (canvasError) {
-    // Final fallback with minimal options
-    console.log("Pixi Canvas failed, trying basic configuration:", canvasError);
-    app = new PixiApplication({
-      width: STAGE_WIDTH,
-      height: STAGE_HEIGHT,
-      backgroundAlpha: 0.1,
-      hello: false,
-    });
+  } catch (webglError) {
+    try {
+      // Fallback to Canvas renderer explicitly
+      console.log("WebGL failed, trying Canvas renderer:", webglError);
+      const { Renderer } = await import("pixi.js");
+      app = new PixiApplication({
+        width: STAGE_WIDTH,
+        height: STAGE_HEIGHT,
+        backgroundAlpha: 0.1,
+        hello: false,
+        renderer: new Renderer({
+          width: STAGE_WIDTH,
+          height: STAGE_HEIGHT,
+          view: document.createElement('canvas'),
+          background: '#000000',
+          backgroundAlpha: 0.1,
+        })
+      });
+    } catch (canvasError) {
+      // Final minimal fallback
+      console.log("Canvas renderer also failed, trying minimal configuration:", canvasError);
+      app = new PixiApplication({
+        width: STAGE_WIDTH,
+        height: STAGE_HEIGHT,
+        backgroundAlpha: 0.1,
+        hello: false,
+      });
+    }
   }
 
   // Create container and overlay structure
