@@ -9,13 +9,17 @@
   },
   "workspaces": [
     "apps/*",
-    "Launcher"
+    "Launcher",
+    "LauncherBackup"
   ],
   "scripts": {
     "dev": "echo Pilih app: npm run dev:launcher atau dev:modul",
     "dev:launcher": "npm run dev -w Launcher",
     "dev:launcher:3000": "npm run dev:3000 -w Launcher",
     "dev:launcher:5000": "npm run dev:5000 -w Launcher",
+    "dev:launcher-backup": "npm run dev -w LauncherBackup",
+    "dev:launcher-backup:3000": "npm run dev:3000 -w LauncherBackup",
+    "dev:launcher-backup:5000": "npm run dev:5000 -w LauncherBackup",
     "dev:0setting": "npm run dev -w apps/0Setting",
     "dev:1meng": "npm run dev -w apps/1Meng",
     "dev:3database": "npm run dev -w apps/3Database",
@@ -25,8 +29,12 @@
     "preview": "npm run preview -w Launcher",
     "preview:3000": "npm run preview:3000 -w Launcher",
     "preview:5000": "npm run preview:5000 -w Launcher",
+    "preview:launcher-backup": "npm run preview -w LauncherBackup",
+    "preview:launcher-backup:3000": "npm run preview:3000 -w LauncherBackup",
+    "preview:launcher-backup:5000": "npm run preview:5000 -w LauncherBackup",
     "build": "echo Pilih app: npm run build:launcher (atau build:<modul>)",
     "build:launcher": "npm run build -w Launcher",
+    "build:launcher-backup": "npm run build -w LauncherBackup",
     "build:0setting": "npm run build -w apps/0Setting",
     "build:1meng": "npm run build -w apps/1Meng",
     "build:3database": "npm run build -w apps/3Database",
