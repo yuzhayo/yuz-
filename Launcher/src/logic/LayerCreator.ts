@@ -1471,15 +1471,25 @@ export function createPixiEngine(): PixiEngine {
         antialias: opts?.antialias ?? true,
         dprCap: opts?.dprCap ?? 2,
       };
-      _app = createPixiApplication(stage2048Options, Application);
+      
+      try {
+        _app = createPixiApplication(stage2048Options, Application);
+        
+        if (!_app) {
+          throw new Error("Failed to create Pixi application");
+        }
 
-      // Mount canvas to DOM
-      root.appendChild(_app.view as HTMLCanvasElement);
+        // Mount canvas to DOM
+        root.appendChild(_app.view as HTMLCanvasElement);
 
-      // Use LayerCreator to build the scene
-      const factories = createPixiFactories();
-      _layerManager = createLayerCreatorManager(factories.spriteFactory);
-      _result = await _layerManager.init(_app, cfg, factories.effectHandler);
+        // Use LayerCreator to build the scene
+        const factories = createPixiFactories();
+        _layerManager = createLayerCreatorManager(factories.spriteFactory);
+        _result = await _layerManager.init(_app, cfg, factories.effectHandler);
+      } catch (error) {
+        console.error("[createPixiEngine] Failed to initialize:", error);
+        throw error;
+      }
 
       // Add the container to the stage
       _app.stage.addChild(_result.container as Container);
