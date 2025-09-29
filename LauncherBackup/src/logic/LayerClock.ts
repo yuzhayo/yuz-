@@ -13,10 +13,9 @@
  * 🟢 UTILITY blocks provide math helpers and can be deleted.
  */
 
-import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
-
 // Import all contracts from centralized location
-import type { GenericSprite, GenericApplication, BuiltLayer, LayerConfig } from "./LayerContracts";
+import { STAGE_WIDTH, STAGE_HEIGHT } from "./LayerCreator";
+import type { GenericSprite, GenericApplication, BuiltLayer, LayerConfig } from "./LayerCreator";
 
 // ===================================================================
 // 🟢 BLOCK 1: UTILITY HELPER FUNCTIONS

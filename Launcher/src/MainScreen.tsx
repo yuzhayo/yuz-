@@ -4,7 +4,7 @@ import { useMainScreenBtnGesture } from "./MainScreenBtnGesture";
 import MainScreenRendererBadge from "./MainScreenRendererBadge";
 import MainScreenUpdater from "./MainScreenUpdater";
 import MainScreenApiTester from "./MainScreenApiTester";
-import { LogicStage } from "@shared/stages/Stage2048";
+import { LogicStage } from "./logic/LayerCreator";
 import type { RendererMode } from "./logic/LayerCreator";
 import logicConfigJson from "./LogicConfig";
 import type { LogicConfig } from "./logic/LayerCreator";
@@ -26,7 +26,7 @@ export default function MainScreen(_props: MainScreenProps) {
       <div className="absolute inset-0">
         <LogicStage 
           buildSceneFromLogic={async (app: any, config: any) => {
-            const { buildSceneFromLogic } = await import('./logic/EnginePixi');
+            const { buildSceneFromLogic } = await import('./logic/LayerCreator');
             return buildSceneFromLogic(app, config);
           }}
           logicConfig={logicConfigJson as LogicConfig}

@@ -14,7 +14,7 @@
  */
 
 // Import core contracts from centralized location
-import type { GenericSprite, GenericApplication, BuiltLayer } from "./LayerContracts";
+import type { GenericSprite, GenericApplication, BuiltLayer } from "./LayerCreator";
 
 // ===================================================================
 // 🟢 BLOCK 1: UTILITY MATH FUNCTIONS AND CAPABILITY DETECTION

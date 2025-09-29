@@ -1,9 +1,15 @@
 /**
- * LayerCreator.ts - Modular Layer Processing System
+ * LayerCreator.ts - Unified Layer Processing & Stage System
  * 
  * ⚠️  AI AGENT CRITICAL INSTRUCTIONS:
  * 
- * This file is organized into ISOLATED BLOCKS. Each block is marked as:
+ * This file contains MERGED functionality from:
+ * - Stage2048.ts (Stage system, transform management, LogicStage component)
+ * - EnginePixi.ts (Pixi-specific factories and engine)
+ * - LayerContracts.ts (All type definitions and interfaces)
+ * - LayerCreator.ts (Core layer processing system)
+ * 
+ * The file is organized into ISOLATED BLOCKS. Each block is marked as:
  * 🔴 CRITICAL - DO NOT DELETE (breaks core functionality)
  * 🟡 OPTIONAL - Safe to delete (removes animations/effects but basic display works)
  * 🟢 UTILITY - Safe to delete (math helpers only, no visual impact)
@@ -13,7 +19,13 @@
  * 🟢 UTILITY blocks provide math helpers and can be deleted.
  */
 
-import { STAGE_WIDTH, STAGE_HEIGHT } from "@shared/stages/Stage2048";
+import React from "react";
+import type {
+  PointerEvent as ReactPointerEvent,
+  MouseEvent as ReactMouseEvent,
+  TouchEvent as ReactTouchEvent,
+} from "react";
+import { Application, Assets, Container, Sprite } from "pixi.js";
 import { createLayerSpinManager } from "./LayerSpin";
 import type { LayerSpinManager } from "./LayerSpin";
 import { createLayerClockManager } from "./LayerClock";
@@ -21,46 +33,303 @@ import type { LayerClockManager } from "./LayerClock";
 import { createLayerOrbitManager } from "./LayerOrbit";
 import type { LayerOrbitManager } from "./LayerOrbit";
 import { createLayerEffectManager } from "./LayerEffect";
-import type { LayerEffectManager, EffectHandler } from "./LayerEffect";
+import type { LayerEffectManager, EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec } from "./LayerEffect";
 
-// Import all contracts from centralized location
-import type {
-  ImageRegistry,
-  ImageRef,
-  RendererMode,
-  GenericSprite,
-  GenericContainer,
-  GenericApplication,
-  LayerConfig,
-  BuiltLayer,
-  BuildResult,
-  LogicConfig,
-  SpriteFactory,
-  // LayerModule and PluginRegistry are for future extensibility
-  LayerModule as _LayerModule,
-  PluginRegistry as _PluginRegistry,
-} from "./LayerContracts";
-
-// Re-export all types for backward compatibility
-export type {
-  ImageRegistry,
-  ImageRef,
-  RendererMode,
-  GenericSprite,
-  GenericContainer,
-  GenericApplication,
-  LayerConfig,
-  BuiltLayer,
-  BuildResult,
-  LogicConfig,
-  SpriteFactory,
-  EffectHandler,
-};
+// Re-export imported types for backward compatibility
+export type { EffectHandler, GlowSpec, BloomSpec, AdvancedEffectSpec };
 
 // ===================================================================
-// 🟢 BLOCK 1: UTILITY MATH FUNCTIONS
+// 🔴 BLOCK 1: ALL TYPE CONTRACTS & INTERFACES
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Core data contracts and type definitions for the entire system
+// ===================================================================
+
+// === CORE DATA CONTRACTS ===
+export type ImageRegistry = Record<string, string>;
+export type ImageRef = { kind: "urlId"; id: string } | { kind: "url"; url: string };
+export type RendererMode = "pixi";
+
+// Engine-agnostic interfaces for cross-renderer compatibility
+export interface GenericSprite {
+  x: number;
+  y: number;
+  rotation: number;
+  alpha: number;
+  scale: {
+    x: number;
+    y: number;
+    set?: (x: number, y: number) => void;
+  };
+  zIndex?: number;
+}
+
+export interface GenericContainer {
+  addChild: (child: GenericSprite) => void;
+  children: GenericSprite[];
+}
+
+export interface GenericApplication {
+  ticker?: {
+    deltaMS?: number;
+    add?: (fn: () => void) => void;
+    remove?: (fn: () => void) => void;
+  };
+}
+
+// Layer configuration schema
+export type LayerConfig = {
+  id: string;
+  imageRef: ImageRef;
+  position: { xPct: number; yPct: number };
+  scale?: { pct?: number };
+  angleDeg?: number;
+  // Spin properties
+  spinRPM?: number | null;
+  spinDir?: "cw" | "ccw";
+  // Orbit properties
+  orbitRPM?: number | null;
+  orbitDir?: "cw" | "ccw";
+  orbitCenter?: { xPct: number; yPct: number };
+  orbitPhaseDeg?: number | null;
+  orbitOrientPolicy?: "none" | "auto" | "override";
+  orbitOrientDeg?: number | null;
+  // Clock and effects
+  clock?: any;
+  effects?: any;
+};
+
+// Build result types
+export interface BuiltLayer {
+  id: string;
+  sprite: GenericSprite;
+  cfg: LayerConfig;
+}
+
+export interface BuildResult {
+  container: GenericContainer;
+  layers: BuiltLayer[];
+}
+
+export type LogicConfig = {
+  layersID: string[];
+  imageRegistry: ImageRegistry;
+  layers: LayerConfig[];
+};
+
+// === MODULE CAPABILITY INTERFACES ===
+
+// Base interface all optional modules must implement
+export interface LayerModule {
+  init(...args: any[]): Promise<void> | void;
+  tick?(elapsed: number): void;
+  recompute?(): void;
+  dispose?(): void;
+  isRequired: boolean; // true = critical, false = optional
+}
+
+// Sprite factory interface for renderer abstraction
+export interface SpriteFactory {
+  createSprite(url: string): Promise<GenericSprite>;
+  createContainer(): GenericContainer;
+  loadAssets(urls: string[]): Promise<void>;
+}
+
+// Plugin registry for modular capabilities
+export interface PluginRegistry {
+  [key: string]: LayerModule;
+}
+
+// === STAGE2048 TYPES ===
+
+export interface StageTransform {
+  scale: number;
+  offsetX: number;
+  offsetY: number;
+  containerWidth: number;
+  containerHeight: number;
+}
+
+export interface StageCoordinates {
+  stageX: number;
+  stageY: number;
+}
+
+export interface Stage2048Options {
+  /** Enable debug overlay */
+  debug?: boolean;
+  /** Device pixel ratio cap */
+  dprCap?: number;
+  /** Background alpha for Pixi canvas */
+  backgroundAlpha?: number;
+  /** Enable antialiasing */
+  antialias?: boolean;
+  /** Inject CSS styles automatically */
+  autoInjectCSS?: boolean;
+}
+
+export interface Stage2048Instance {
+  /** Pixi Application instance */
+  app: any; // Using any to avoid direct Pixi dependency
+  /** Transform manager for coordinate conversion */
+  transformManager: StageTransformManager;
+  /** Get the overlay element for gesture handling */
+  getOverlay(): HTMLElement | null;
+  /** Get current transform data */
+  getTransform(): StageTransform | null;
+  /** Transform event coordinates to stage coordinates */
+  transformEventCoordinates(event: PointerEvent | MouseEvent | TouchEvent): StageCoordinates | null;
+  /** Clean up and dispose resources */
+  dispose(): void;
+}
+
+// === PIXI ENGINE TYPES ===
+
+export type PixiEngineOptions = {
+  dprCap?: number;
+  resizeTo?: Window | HTMLElement;
+  backgroundAlpha?: number;
+  antialias?: boolean;
+};
+
+export type EngineHandle = {
+  dispose(): void;
+};
+
+export interface PixiEngine {
+  init(root: HTMLElement, cfg: LogicConfig, opts?: PixiEngineOptions): Promise<EngineHandle>;
+  tick(elapsed: number): void;
+  recompute(): void;
+  dispose(): void;
+  getApplication(): Application | null;
+  getContainer(): GenericContainer | null;
+  getLayers(): BuiltLayer[];
+  hasAnimations(): boolean;
+}
+
+// ===================================================================
+// 🔴 BLOCK 2: STAGE2048 CONSTANTS & CSS
+// ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
+// Fixed stage dimensions and CSS styles for responsive scaling
+// ===================================================================
+
+/** Fixed stage dimensions - 2048×2048 design canvas */
+export const STAGE_WIDTH = 2048;
+export const STAGE_HEIGHT = 2048;
+
+/** CSS styles for the stage system */
+export const STAGE_CSS = `
+/**
+ * Stage 1:1 Cover CSS
+ * Ensures 2048×2048 design world displays consistently across all devices
+ * with cover behavior (fills viewport, maintains aspect ratio)
+ */
+
+/* Container for the stage - centered and scaled */
+.stage-cover-container {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  transform-origin: center center;
+  overflow: hidden;
+  
+  /* Will be set dynamically by JS */
+  width: 2048px;
+  height: 2048px;
+}
+
+/* The actual canvas element */
+.stage-cover-canvas {
+  display: block;
+  transform-origin: 0 0;
+  
+  /* Fixed design dimensions */
+  width: 2048px !important;
+  height: 2048px !important;
+  
+  /* Prevent any browser-imposed sizing */
+  max-width: none !important;
+  max-height: none !important;
+  min-width: 2048px !important;
+  min-height: 2048px !important;
+  
+  /* GPU acceleration */
+  will-change: transform;
+  
+  /* Disable user interaction on the canvas itself 
+     (gestures will be handled by overlay) */
+  pointer-events: none;
+}
+
+/* Overlay for gesture handling - covers the scaled area */
+.stage-cover-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: auto;
+  z-index: 1;
+  
+  /* Invisible but interactive */
+  background: transparent;
+}
+
+/* Root container should fill viewport */
+.stage-cover-root {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* Debug overlay (optional - can be toggled for development) */
+.stage-cover-debug {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  font-family: monospace;
+  font-size: 12px;
+  border-radius: 4px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* Animation for smooth transitions */
+.stage-cover-container,
+.stage-cover-canvas {
+  transition: transform 0.1s ease-out;
+}
+
+/* Mobile-specific optimizations */
+@media (max-width: 768px) {
+  .stage-cover-container,
+  .stage-cover-canvas {
+    /* Faster transitions on mobile */
+    transition: transform 0.05s ease-out;
+  }
+}
+
+/* Prevent text selection in the stage area */
+.stage-cover-root {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  
+  /* Prevent touch callouts */
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
+`.trim();
+
+// ===================================================================
+// 🟢 BLOCK 3: CORE TRANSFORM & MATH FUNCTIONS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete if not needed
-// These are helper functions for angle/value conversions
+// Math helpers for angle/value conversions and stage transformations
 // ===================================================================
 
 function toRad(deg: number): number {
@@ -90,8 +359,79 @@ function clampRpm60(v: unknown): number {
   return Math.min(60, Math.max(0, n));
 }
 
+/**
+ * Calculate stage transform for cover behavior
+ * Fills viewport while maintaining aspect ratio
+ */
+export function calculateStageTransform(
+  viewportWidth: number,
+  viewportHeight: number,
+): StageTransform {
+  // Cover behavior: scale to fill viewport, crop what doesn't fit
+  const scaleX = viewportWidth / STAGE_WIDTH;
+  const scaleY = viewportHeight / STAGE_HEIGHT;
+  const scale = Math.max(scaleX, scaleY); // Use larger scale for cover
+
+  const scaledWidth = STAGE_WIDTH * scale;
+  const scaledHeight = STAGE_HEIGHT * scale;
+
+  // Center the scaled stage
+  const offsetX = (viewportWidth - scaledWidth) / 2;
+  const offsetY = (viewportHeight - scaledHeight) / 2;
+
+  return {
+    scale,
+    offsetX,
+    offsetY,
+    containerWidth: scaledWidth,
+    containerHeight: scaledHeight,
+  };
+}
+
+/**
+ * Transform viewport coordinates to stage coordinates
+ * Essential for making gestures work with scaled canvas
+ */
+export function transformCoordinatesToStage(
+  clientX: number,
+  clientY: number,
+  transform: StageTransform,
+): StageCoordinates {
+  // Convert from viewport coordinates to stage coordinates
+  const stageX = (clientX - transform.offsetX) / transform.scale;
+  const stageY = (clientY - transform.offsetY) / transform.scale;
+
+  return { stageX, stageY };
+}
+
+/**
+ * Check if coordinates are within the stage bounds
+ */
+export function isWithinStage(stageX: number, stageY: number): boolean {
+  return stageX >= 0 && stageX <= STAGE_WIDTH && stageY >= 0 && stageY <= STAGE_HEIGHT;
+}
+
+/**
+ * Inject CSS styles into the document head
+ * Only injects once, safe to call multiple times
+ */
+export function ensureStageStyles(): void {
+  const styleId = "stage2048-styles";
+
+  // Check if styles are already injected
+  if (document.getElementById(styleId)) {
+    return;
+  }
+
+  // Create and inject style element
+  const styleElement = document.createElement("style");
+  styleElement.id = styleId;
+  styleElement.textContent = STAGE_CSS;
+  document.head.appendChild(styleElement);
+}
+
 // ===================================================================
-// 🔴 BLOCK 2: CORE LAYER TRANSFORM FUNCTIONS
+// 🔴 BLOCK 4: CORE LAYER TRANSFORM FUNCTIONS
 // ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
 // These functions handle basic layer positioning and z-ordering
 // ===================================================================
@@ -122,7 +462,7 @@ function logicApplyBasicTransform(app: GenericApplication, sp: GenericSprite, cf
 }
 
 // ===================================================================
-// 🔴 BLOCK 3: CONFIG PROCESSING
+// 🔴 BLOCK 5: CONFIG PROCESSING
 // ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
 // Handles JSON config reading and image URL resolution
 // ===================================================================
@@ -134,7 +474,254 @@ function getUrlForImageRef(cfg: LogicConfig, ref: LayerConfig["imageRef"]): stri
 }
 
 // ===================================================================
-// 🟡 BLOCK 4: ANIMATION MANAGERS STATE
+// 🟡 BLOCK 6: STAGE2048 TRANSFORM MANAGEMENT
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage transform)
+// Handles DOM manipulation and coordinate transformation for stage scaling
+// ===================================================================
+
+/**
+ * Stage transform manager class
+ * Handles DOM manipulation and coordinate transformation
+ */
+export class StageTransformManager {
+  private container: HTMLElement | null = null;
+  private canvas: HTMLCanvasElement | null = null;
+  private overlay: HTMLElement | null = null;
+  private transform: StageTransform | null = null;
+  private resizeObserver: ResizeObserver | null = null;
+  private debugElement: HTMLElement | null = null;
+
+  constructor(private debug = false) {
+    // Initialize resize observer
+    this.resizeObserver = new ResizeObserver((entries) => {
+      for (const entry of entries) {
+        if (entry.target === document.body || entry.target === document.documentElement) {
+          this.updateTransform();
+        }
+      }
+    });
+  }
+
+  /**
+   * Initialize the stage transform system
+   */
+  initialize(container: HTMLElement, canvas: HTMLCanvasElement, overlay?: HTMLElement) {
+    this.container = container;
+    this.canvas = canvas;
+    this.overlay = overlay || null;
+
+    // Apply CSS classes
+    container.classList.add("stage-cover-container");
+    canvas.classList.add("stage-cover-canvas");
+    if (overlay) {
+      overlay.classList.add("stage-cover-overlay");
+    }
+
+    // Start observing resize events
+    this.resizeObserver?.observe(document.body);
+
+    // Setup debug if enabled
+    if (this.debug) {
+      this.setupDebug();
+    }
+
+    // Initial transform
+    this.updateTransform();
+
+    return this;
+  }
+
+  /**
+   * Update transform based on current viewport size
+   */
+  updateTransform() {
+    if (!this.container || !this.canvas) return;
+
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+
+    this.transform = calculateStageTransform(viewportWidth, viewportHeight);
+
+    // Apply CSS transforms
+    this.canvas.style.transform = `scale(${this.transform.scale})`;
+    this.container.style.width = `${this.transform.containerWidth}px`;
+    this.container.style.height = `${this.transform.containerHeight}px`;
+
+    // Update debug info
+    if (this.debug && this.debugElement) {
+      this.updateDebugInfo();
+    }
+  }
+
+  /**
+   * Transform event coordinates to stage coordinates
+   */
+  transformEventCoordinates(
+    event: PointerEvent | MouseEvent | TouchEvent,
+  ): StageCoordinates | null {
+    if (!this.transform) return null;
+
+    let clientX: number, clientY: number;
+
+    if ("touches" in event && event.touches.length > 0) {
+      // Touch event
+      const firstTouch = event.touches.item(0);
+      if (!firstTouch) return null;
+      clientX = firstTouch.clientX;
+      clientY = firstTouch.clientY;
+    } else if ("clientX" in event) {
+      // Mouse or pointer event
+      clientX = event.clientX;
+      clientY = event.clientY;
+    } else {
+      return null;
+    }
+
+    return transformCoordinatesToStage(clientX, clientY, this.transform);
+  }
+
+  /**
+   * Get current transform data
+   */
+  getTransform(): StageTransform | null {
+    return this.transform;
+  }
+
+  /**
+   * Setup debug overlay
+   */
+  private setupDebug() {
+    this.debugElement = document.createElement("div");
+    this.debugElement.classList.add("stage-cover-debug");
+    document.body.appendChild(this.debugElement);
+    this.updateDebugInfo();
+  }
+
+  /**
+   * Update debug information
+   */
+  private updateDebugInfo() {
+    if (!this.debugElement || !this.transform) return;
+
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    const aspectRatio = (vw / vh).toFixed(2);
+
+    this.debugElement.innerHTML = `
+      Stage: ${STAGE_WIDTH}×${STAGE_HEIGHT}<br>
+      Viewport: ${vw}×${vh} (${aspectRatio}:1)<br>
+      Scale: ${this.transform.scale.toFixed(3)}<br>
+      Container: ${Math.round(this.transform.containerWidth)}×${Math.round(this.transform.containerHeight)}<br>
+      Offset: ${Math.round(this.transform.offsetX)}, ${Math.round(this.transform.offsetY)}
+    `.trim();
+  }
+
+  /**
+   * Clean up resources
+   */
+  dispose() {
+    this.resizeObserver?.disconnect();
+    if (this.debugElement) {
+      document.body.removeChild(this.debugElement);
+    }
+    this.container = null;
+    this.canvas = null;
+    this.overlay = null;
+    this.transform = null;
+    this.debugElement = null;
+  }
+}
+
+// ===================================================================
+// 🟡 BLOCK 7: PIXI ENGINE FACTORIES
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes Pixi-specific features)
+// Pixi-specific implementations for sprite creation and effects
+// ===================================================================
+
+// === PIXI APPLICATION DETECTION ===
+export function isPixiApplication(app: any): boolean {
+  return !!(
+    app &&
+    typeof app === "object" &&
+    app.renderer &&
+    app.stage &&
+    app.ticker &&
+    typeof app.render === "function"
+  );
+}
+
+// === PIXI-SPECIFIC EFFECT HANDLER ===
+export function createPixiEffectHandler(): EffectHandler {
+  return {
+    createAuraSprite(
+      originalSprite: GenericSprite,
+      spec: GlowSpec | BloomSpec,
+    ): GenericSprite | null {
+      const pixiSprite = originalSprite as Sprite;
+      const auraSprite = new Sprite(pixiSprite.texture);
+      auraSprite.anchor.set(0.5);
+
+      if (spec.type === "glow") {
+        auraSprite.tint = spec.color;
+        auraSprite.alpha = spec.alpha;
+      } else if (spec.type === "bloom") {
+        auraSprite.alpha = Math.min(1, 0.3 + spec.strength * 0.4);
+      }
+
+      auraSprite.blendMode = 1; // BLEND_MODES.ADD
+
+      const parent = pixiSprite.parent;
+      if (parent) {
+        const index = parent.getChildIndex(pixiSprite);
+        parent.addChildAt(auraSprite, index);
+      }
+
+      return auraSprite as GenericSprite;
+    },
+
+    applyAdvancedEffect(_sprite: GenericSprite, _spec: AdvancedEffectSpec, _elapsed: number): void {
+      // Advanced effects are handled in LayerEffect.ts tick method
+      // This method is for any engine-specific advanced effect rendering
+    },
+
+    disposeAuraSprite(sprite: GenericSprite): void {
+      const pixiSprite = sprite as Sprite;
+      try {
+        pixiSprite.destroy();
+      } catch {
+        // Ignore destroy errors
+      }
+    },
+  };
+}
+
+// === PIXI-SPECIFIC SPRITE FACTORY ===
+export function createPixiSpriteFactory(): SpriteFactory {
+  return {
+    async createSprite(url: string): Promise<GenericSprite> {
+      const texture = await Assets.load(url);
+      const sprite = new Sprite(texture);
+      return sprite as GenericSprite;
+    },
+
+    createContainer(): GenericContainer {
+      return new Container() as GenericContainer;
+    },
+
+    async loadAssets(urls: string[]): Promise<void> {
+      await Promise.all(
+        urls.map((url) =>
+          Assets.load(url).catch((e) => {
+            console.warn("[EnginePixi] Preload failed for", url, e);
+          }),
+        ),
+      );
+    },
+  };
+}
+
+// ===================================================================
+// 🟡 BLOCK 8: ANIMATION MANAGERS STATE
 // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
 // Manages spin, orbit, clock, and effect animations
 // ===================================================================
@@ -156,7 +743,7 @@ export type LayerCreatorManagersState = {
 };
 
 // ===================================================================
-// 🔴 BLOCK 5: CORE MANAGER INTERFACE
+// 🔴 BLOCK 9: CORE MANAGER INTERFACE
 // ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
 // Main interface that external code depends on
 // ===================================================================
@@ -176,7 +763,7 @@ export interface LayerCreatorManager {
 }
 
 // ===================================================================
-// 🔴 BLOCK 6: CORE LAYER CREATOR IMPLEMENTATION
+// 🔴 BLOCK 10: CORE LAYER CREATOR IMPLEMENTATION
 // ⚠️  AI AGENT: CRITICAL BLOCK - DO NOT DELETE
 // Main implementation that creates and manages layers
 // ===================================================================
@@ -310,7 +897,7 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       _layers = built;
 
       // ===================================================================
-      // 🟡 BLOCK 7: ANIMATION MANAGERS INITIALIZATION
+      // 🟡 BLOCK 11: ANIMATION MANAGERS INITIALIZATION
       // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes animations)
       // ===================================================================
 
@@ -344,7 +931,7 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
       };
 
       // ===================================================================
-      // 🟡 BLOCK 8: LIFECYCLE HOOKS (RESIZE/TICKER)
+      // 🟡 BLOCK 12: LIFECYCLE HOOKS (RESIZE/TICKER)
       // ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes auto-updates)
       // ===================================================================
 
@@ -516,13 +1103,460 @@ export function createLayerCreatorManager(spriteFactory?: SpriteFactory): LayerC
 }
 
 // ===================================================================
-// 🟢 BLOCK 9: CONVENIENCE EXPORTS
+// 🟡 BLOCK 13: STAGE2048 FACTORY FUNCTIONS
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes stage creation)
+// Factory functions for creating complete Stage2048 systems
+// ===================================================================
+
+/**
+ * Create a complete Stage2048 system with Pixi.js integration
+ *
+ * This is the main factory function that sets up everything you need:
+ * - CSS injection
+ * - Pixi Application creation
+ * - DOM structure setup
+ * - Transform management
+ * - Coordinate transformation
+ *
+ * @param rootElement - The root element to mount the stage
+ * @param options - Configuration options
+ * @param PixiApplication - Pixi Application constructor (injected to avoid direct dependency)
+ * @returns Promise resolving to Stage2048Instance
+ */
+export async function createStage2048(
+  rootElement: HTMLElement,
+  options: Stage2048Options = {},
+  PixiApplication?: any,
+): Promise<Stage2048Instance> {
+  // Inject CSS if enabled (default: true)
+  if (options.autoInjectCSS !== false) {
+    ensureStageStyles();
+  }
+
+  // Ensure we have a Pixi Application constructor
+  if (!PixiApplication) {
+    try {
+      // Try to import Pixi.js dynamically
+      const pixi = await import("pixi.js");
+      PixiApplication = pixi.Application;
+    } catch {
+      throw new Error(
+        "Pixi.js Application not available. Please provide PixiApplication parameter or install pixi.js",
+      );
+    }
+  }
+
+  // Create transform manager
+  const transformManager = new StageTransformManager(options.debug);
+
+  // Create Pixi application with FIXED dimensions
+  const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
+
+  // Create Pixi application with forced renderer type to avoid auto-detection
+  let app: any;
+  
+  // Try WebGL first, then fallback to Canvas if needed
+  try {
+    app = new PixiApplication({
+      width: STAGE_WIDTH,
+      height: STAGE_HEIGHT,
+      backgroundAlpha: options.backgroundAlpha ?? 0.1, // Make slightly visible for debugging
+      antialias: options.antialias ?? false,
+      autoDensity: false,
+      resolution: 1, // Keep simple for compatibility
+      powerPreference: 'low-power', // Use less demanding GPU settings
+      hello: false, // Disable Pixi banner
+    });
+  } catch (webglError) {
+    try {
+      // Fallback to Canvas renderer explicitly
+      console.log("WebGL failed, trying Canvas renderer:", webglError);
+      const { Renderer } = await import("pixi.js");
+      app = new PixiApplication({
+        width: STAGE_WIDTH,
+        height: STAGE_HEIGHT,
+        backgroundAlpha: 0.1,
+        hello: false,
+        renderer: new Renderer({
+          width: STAGE_WIDTH,
+          height: STAGE_HEIGHT,
+          view: document.createElement('canvas'),
+          background: '#000000',
+          backgroundAlpha: 0.1,
+        })
+      });
+    } catch (canvasError) {
+      // Final minimal fallback
+      console.log("Canvas renderer also failed, trying minimal configuration:", canvasError);
+      app = new PixiApplication({
+        width: STAGE_WIDTH,
+        height: STAGE_HEIGHT,
+        backgroundAlpha: 0.1,
+        hello: false,
+      });
+    }
+  }
+
+  // Create container and overlay structure
+  const container = document.createElement("div");
+  const overlay = document.createElement("div");
+
+  // Setup DOM structure
+  rootElement.classList.add("stage-cover-root");
+  rootElement.appendChild(container);
+  container.appendChild(app.view as HTMLCanvasElement);
+  container.appendChild(overlay);
+
+  // Initialize transform system
+  transformManager.initialize(container, app.view as HTMLCanvasElement, overlay);
+
+  // Return complete Stage2048Instance
+  return {
+    app,
+    transformManager,
+
+    getOverlay(): HTMLElement | null {
+      return (container?.querySelector(".stage-cover-overlay") as HTMLElement) || null;
+    },
+
+    getTransform(): StageTransform | null {
+      return transformManager.getTransform();
+    },
+
+    transformEventCoordinates(
+      event: PointerEvent | MouseEvent | TouchEvent,
+    ): StageCoordinates | null {
+      return transformManager.transformEventCoordinates(event);
+    },
+
+    dispose() {
+      if (app) {
+        try {
+          // Remove canvas from DOM
+          const canvas = app.view as HTMLCanvasElement;
+          if (container && container.contains(canvas)) {
+            container.removeChild(canvas);
+          }
+        } catch (e) {
+          console.warn("Failed to remove canvas from DOM:", e);
+        }
+
+        // Destroy Pixi app
+        app.destroy(true, {
+          children: true,
+          texture: true,
+          baseTexture: true,
+        });
+      }
+
+      // Clean up container
+      if (container?.parentElement) {
+        container.parentElement.removeChild(container);
+      }
+
+      // Dispose transform manager
+      transformManager.dispose();
+    },
+  };
+}
+
+/**
+ * Create just the transform manager (for custom Pixi setups)
+ */
+export function createTransformManager(debug = false): StageTransformManager {
+  return new StageTransformManager(debug);
+}
+
+/**
+ * Create just the Pixi application with correct dimensions
+ */
+export function createPixiApplication(options: Stage2048Options = {}, PixiApplication?: any) {
+  if (!PixiApplication) {
+    throw new Error("PixiApplication constructor required");
+  }
+
+  const dpr = Math.min(options.dprCap ?? 2, window.devicePixelRatio || 1);
+
+  return new PixiApplication({
+    width: STAGE_WIDTH,
+    height: STAGE_HEIGHT,
+    backgroundAlpha: options.backgroundAlpha ?? 0,
+    antialias: options.antialias ?? true,
+    autoDensity: true,
+    resolution: dpr,
+    preference: "webgl",
+  });
+}
+
+// === REACT INTEGRATION ===
+
+/**
+ * Create a coordinate transformer hook for React components
+ */
+export function createCoordinateTransformer(manager: StageTransformManager) {
+  return {
+    /**
+     * Transform pointer event coordinates to stage coordinates
+     */
+    transformPointerEvent: (event: ReactPointerEvent<HTMLElement>): StageCoordinates | null => {
+      return manager.transformEventCoordinates(event.nativeEvent);
+    },
+
+    /**
+     * Transform mouse event coordinates to stage coordinates
+     */
+    transformMouseEvent: (event: ReactMouseEvent<HTMLElement>): StageCoordinates | null => {
+      return manager.transformEventCoordinates(event.nativeEvent);
+    },
+
+    /**
+     * Transform touch event coordinates to stage coordinates
+     */
+    transformTouchEvent: (event: ReactTouchEvent<HTMLElement>): StageCoordinates | null => {
+      return manager.transformEventCoordinates(event.nativeEvent);
+    },
+  };
+}
+
+/**
+ * Hook for using coordinate transformation in gesture components
+ */
+export function useStageCoordinates(transformManager: StageTransformManager) {
+  return {
+    /**
+     * Transform React pointer event to stage coordinates
+     */
+    transformPointerEvent: (event: ReactPointerEvent<HTMLElement>) => {
+      return transformManager.transformEventCoordinates(event.nativeEvent);
+    },
+
+    /**
+     * Get current stage transform data
+     */
+    getTransform: () => transformManager.getTransform(),
+
+    /**
+     * Check if stage coordinates are within bounds
+     */
+    isWithinStage: (stageX: number, stageY: number) => {
+      return stageX >= 0 && stageX <= STAGE_WIDTH && stageY >= 0 && stageY <= STAGE_HEIGHT;
+    },
+  };
+}
+
+// ===================================================================
+// 🟡 BLOCK 14: LOGICSTAGE REACT COMPONENT
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes React component)
+// React component for integrating with the layer system
+// ===================================================================
+
+export type LogicStageProps = {
+  className?: string;
+  buildSceneFromLogic?: (app: any, config: any) => Promise<{ container: any }>;
+  logicConfig?: any;
+};
+
+export function LogicStage(props: LogicStageProps = {}) {
+  const ref = React.useRef<HTMLDivElement | null>(null);
+
+  React.useEffect(() => {
+    let stage: any = null;
+    let cleanupScene: (() => void) | undefined;
+    (async () => {
+      const el = ref.current;
+      if (!el) return;
+
+      try {
+        // Create stage with 2048×2048 dimensions using the new module
+        stage = await createStage2048(el, {
+          backgroundAlpha: 0,
+          antialias: true,
+          debug: false, // Set to true for development debugging
+          autoInjectCSS: true,
+        });
+
+        // Build scene using provided builder function and config
+        if (props.buildSceneFromLogic && props.logicConfig) {
+          const scene = await props.buildSceneFromLogic(stage.app, props.logicConfig);
+          stage.app.stage.addChild(scene.container);
+          console.log("[LogicStage] Scene built and added successfully");
+
+          cleanupScene = () => {
+            try {
+              (scene.container as any)._cleanup?.();
+            } catch {}
+            try {
+              // Only call destroy if it exists (Pixi containers have destroy, but generic containers may not)
+              if (typeof (scene.container as any).destroy === 'function') {
+                (scene.container as any).destroy({ children: true });
+              }
+            } catch {}
+          };
+        } else {
+          console.log("[LogicStage] No scene builder provided, stage created without scene");
+          cleanupScene = () => {
+            console.log("[LogicStage] Scene cleanup called");
+          };
+        }
+      } catch (e) {
+        console.error("[LogicStage] Failed to build scene from logic config", e);
+      }
+    })();
+
+    return () => {
+      try {
+        cleanupScene?.();
+      } catch {}
+      try {
+        stage?.dispose();
+      } catch {}
+    };
+  }, []);
+
+  return React.createElement("div", { 
+    ref, 
+    className: props?.className 
+  });
+}
+
+// ===================================================================
+// 🟡 BLOCK 15: PIXI ENGINE IMPLEMENTATION
+// ⚠️  AI AGENT: OPTIONAL BLOCK - Safe to delete (removes engine wrapper)
+// Advanced Pixi engine implementation for direct control
+// ===================================================================
+
+// === SIMPLIFIED BUILD SCENE FUNCTION ===
+// This is the main function used by the Stage2048 component
+export async function buildSceneFromLogic(
+  app: GenericApplication,
+  cfg: LogicConfig,
+): Promise<BuildResult> {
+  let spriteFactory: SpriteFactory | undefined;
+  let effectHandler: EffectHandler | undefined;
+
+  // Detect engine type and create appropriate factories
+  if (isPixiApplication(app)) {
+    try {
+      spriteFactory = createPixiSpriteFactory();
+      effectHandler = createPixiEffectHandler();
+    } catch (e) {
+      console.warn("[buildSceneFromLogic] Failed to create Pixi factories:", e);
+    }
+  } else {
+    console.warn("[buildSceneFromLogic] Non-Pixi application detected");
+  }
+
+  // Use LayerCreator to handle all the complex logic
+  const layerCreatorManager = createLayerCreatorManager(spriteFactory);
+  return await layerCreatorManager.init(app, cfg, effectHandler);
+}
+
+// Create Pixi engine implementation that uses LayerCreator internally
+export function createPixiEngine(): PixiEngine {
+  let _app: Application | null = null;
+  let _root: HTMLElement | null = null;
+  let _layerManager: LayerCreatorManager | null = null;
+  let _result: BuildResult | null = null;
+
+  const engine = {
+    async init(
+      root: HTMLElement,
+      cfg: LogicConfig,
+      opts?: PixiEngineOptions,
+    ): Promise<EngineHandle> {
+      _root = root;
+
+      // Create Pixi Application with options
+      const dpr = Math.min(opts?.dprCap ?? 2, window.devicePixelRatio || 1);
+      _app = new Application({
+        resizeTo: opts?.resizeTo ?? window,
+        backgroundAlpha: opts?.backgroundAlpha ?? 0,
+        antialias: opts?.antialias ?? true,
+        autoDensity: true,
+        resolution: dpr,
+      });
+
+      // Mount canvas to DOM
+      root.appendChild(_app.view as HTMLCanvasElement);
+
+      // Use LayerCreator to build the scene
+      const spriteFactory = createPixiSpriteFactory();
+      const effectHandler = createPixiEffectHandler();
+      _layerManager = createLayerCreatorManager(spriteFactory);
+      _result = await _layerManager.init(_app, cfg, effectHandler);
+
+      // Add the container to the stage
+      _app.stage.addChild(_result.container as Container);
+
+      // Return handle for external cleanup
+      return {
+        dispose() {
+          engine.dispose();
+        },
+      };
+    },
+
+    tick(elapsed: number): void {
+      _layerManager?.tick(elapsed);
+    },
+
+    recompute(): void {
+      _layerManager?.recompute();
+    },
+
+    dispose(): void {
+      try {
+        _layerManager?.dispose();
+      } catch {}
+
+      try {
+        if (_root && _app?.view && _root.contains(_app.view as HTMLCanvasElement)) {
+          _root.removeChild(_app.view as HTMLCanvasElement);
+        }
+      } catch {}
+
+      try {
+        _app?.destroy(true, { children: true, texture: true, baseTexture: true });
+      } catch {}
+
+      _app = null;
+      _root = null;
+      _layerManager = null;
+      _result = null;
+    },
+
+    getApplication(): Application | null {
+      return _app;
+    },
+
+    getContainer(): GenericContainer | null {
+      return _result?.container ?? null;
+    },
+
+    getLayers(): BuiltLayer[] {
+      return _result?.layers ? [..._result.layers] : [];
+    },
+
+    hasAnimations(): boolean {
+      return _layerManager?.hasAnimations() ?? false;
+    },
+  };
+
+  return engine;
+}
+
+// ===================================================================
+// 🟢 BLOCK 16: CONVENIENCE EXPORTS
 // ⚠️  AI AGENT: UTILITY BLOCK - Safe to delete (convenience only)
-// Export functions for external use
+// Export functions and default component for external use
 // ===================================================================
 
 export function createCreatorManager(): LayerCreatorManager {
   return createLayerCreatorManager();
+}
+
+export function createEngine(): PixiEngine {
+  return createPixiEngine();
 }
 
 // Export utilities for external access
@@ -536,3 +1570,6 @@ export {
   logicZIndexFor,
   logicApplyBasicTransform,
 };
+
+// Export default for LogicStage
+export default LogicStage;
